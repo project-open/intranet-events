@@ -572,6 +572,8 @@ ad_proc im_event_cube {
 			im_conf_items ci
 		where	r.object_id_one = e.event_id and
 			r.object_id_two = ci.conf_item_id and
+ 			e.event_start_date <= :report_end_date::date and
+			e.event_end_date >= :report_start_date::date and
 			ci.conf_item_status_id not in ([im_conf_item_status_deleted])
 		order by ci.conf_item_name
 	"]
@@ -593,12 +595,10 @@ ad_proc im_event_cube {
 		im_biz_object_member__list(e.event_id) as event_members,
 		CASE WHEN e.event_start_date < :report_start_date THEN 1 ELSE 0 END as event_starts_before_report_p
 	from	acs_objects o,
-		im_events e,
-		acs_rels r,
-		users u
+		im_events e
+		LEFT OUTER JOIN acs_rels r ON (r.object_id_one = e.event_id)
+		LEFT OUTER JOIN users u ON (r.object_id_two = u.user_id)
 	where	o.object_id = e.event_id and
-		r.object_id_one = e.event_id and
-		r.object_id_two = u.user_id and
 		e.event_start_date <= :report_end_date::date and
 		e.event_end_date >= :report_start_date::date
 		$where_clause
@@ -694,8 +694,6 @@ ad_proc im_event_cube {
 
 	}
     }
-
-
 
     # ---------------------------------------------------------------
     # Resources per user
@@ -1146,15 +1144,19 @@ ad_proc im_event_cube {
 	}
 	set before_events_html ""
 	foreach eid $events {
-	    set event_values $event_info_hash($eid)
-	    set conflict_key "$resource_id-$eid"
-	    set conflict_p [info exists conflict_hash($conflict_key)]
-	    append before_events_html [im_event_cube_render_event \
-					   -event_values $event_values \
-					   -report_start_date_julian $report_start_date_julian \
-					   -conflict_p $conflict_p \
-					   -location resource_list \
-            ]
+	    if {[catch {
+		set event_values $event_info_hash($eid)
+		set conflict_key "$resource_id-$eid"
+		set conflict_p [info exists conflict_hash($conflict_key)]
+		append before_events_html [im_event_cube_render_event \
+					       -event_values $event_values \
+					       -report_start_date_julian $report_start_date_julian \
+					       -conflict_p $conflict_p \
+					       -location resource_list \
+                ]
+	    } err_msg]} {
+		append before_events_html "<div>$err_msg</div>"
+	    }
 	}
 
 	foreach day $day_list {
