@@ -437,14 +437,15 @@ end;$body$ language 'plpgsql';
  -- ------------------------------------------------------------
 
 create table im_event_order_item_rels (
-    	event_id		integer
-				constraint im_event_order_item_rels_event_fk
-				references im_events,
-	order_item_id		integer
-				constraint im_event_order_item_rels_order_item_fk
-				references im_invoice_items,
-	order_item_amount	numeric(12,3) default 1.0
-	primary key(event_id, order_item_id)
+   	event_id		integer
+					constraint im_event_order_item_rels_event_fk
+					references im_events,
+	order_item_id	integer
+					constraint im_event_order_item_rels_order_item_fk
+					references im_invoice_items,
+	order_item_amount	numeric(12,3) 
+						default 1.0,
+	primary key (event_id, order_item_id)
 );
 
 
@@ -453,7 +454,6 @@ create index im_event_order_item_rels_event_idx on im_event_order_item_rels(even
 -- create index im_event_order_item_rels_order_item_idx on im_event_order_item_rels(order_item_id);
 
 alter table im_event_order_item_rels alter column order_item_amount type numeric(12,3);
-
 
 ------------------------------------------------------
 -- Events Permissions
@@ -508,14 +508,9 @@ update im_categories set category = 'Training Event' where category_id = 82100;
 SELECT im_category_new (82110, 'Presales Event', 'Intranet Event Type');
 SELECT im_category_new (82120, 'Internal Event', 'Intranet Event Type');
 
-
-
 SELECT im_category_new (82200, 'Confirmed', 'Intranet Event Participant Status');
 SELECT im_category_new (82210, 'Reserved', 'Intranet Event Participant Status');
 SELECT im_category_new (82290, 'Deleted', 'Intranet Event Participant Status');
-
-
-
 
 update im_categories set aux_string2 = '99CCFF' where category_id = 5000;
 update im_categories set aux_string2 = 'CCFFCC' where category_id = 5001;
