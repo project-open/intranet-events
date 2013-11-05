@@ -1,4 +1,4 @@
-﻿-- /packages/intranet-events/sql/postgresql/intranet-events-create.sql
+-- /packages/intranet-events/sql/postgresql/intranet-events-create.sql
 --
 -- Copyright (C) 2003-2013 ]project-open[
 -- @author	frank.bergmann@project-open.com
