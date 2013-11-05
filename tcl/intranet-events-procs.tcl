@@ -1056,7 +1056,7 @@ ad_proc im_event_cube {
 	set location_name [lindex $location_tuple 1]
 	set location_seats [lindex $location_tuple 2]
 	set location_note [lindex $location_tuple 3]
-	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {location_id}]' title='$location_note'>$location_name ($location_seats)</a></nobr></td>\n"
+	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]' title='$location_note'>$location_name ($location_seats)</a></nobr></td>\n"
 
 	# Deal with the events starting before the actual reporting interval
 	set events [list]
@@ -1135,7 +1135,7 @@ ad_proc im_event_cube {
 	set resource_id [lindex $resource_tuple 0]
 	set resource_name [lindex $resource_tuple 1]
 	set resource_note [lindex $resource_tuple 2]
-	append table_body "<td colspan=2><nobr><a href='[export_vars -base $resource_url {resource_id}]' title='$resource_note'>$resource_name</a></nobr></td>\n"
+	append table_body "<td colspan=2><nobr><a href='[export_vars -base $resource_url {{conf_item_id $resource_id} {form_mode display}}]' title='$resource_note'>$resource_name</a></nobr></td>\n"
 
 	# Deal with the events starting before the actual reporting interval
 	set events [list]
