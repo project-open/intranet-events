@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message_catalog package_key="intranet-events" locale="de_DE" charset="ISO-8859-1">
+
+  <msg key="Add_a_new_event">Neues Event</msg>
+</message_catalog>
