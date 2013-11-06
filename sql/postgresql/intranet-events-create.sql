@@ -437,7 +437,7 @@ end;$body$ language 'plpgsql';
  -- ------------------------------------------------------------
 
 create table im_event_order_item_rels (
-   	event_id		integer
+	event_id		integer
 					constraint im_event_order_item_rels_event_fk
 					references im_events,
 	order_item_id	integer
