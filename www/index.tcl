@@ -86,9 +86,9 @@ set all_l10n [lang::message::lookup "" intranet-core.All "All"]
 set timescale_l10n [lang::message::lookup "" intranet-events.Timescale "Timescale"]
 
 set show_users_l10n [lang::message::lookup "" intranet-events.Show_Users_P "Show Users?"]
-set show_locations_l10n [lang::message::lookup "" intranet-events.Show_Users_P "Show Locations?"]
-set show_resources_l10n [lang::message::lookup "" intranet-events.Show_Users_P "Show Resources?"]
-set show_event_list_l10n [lang::message::lookup "" intranet-events.Show_Users_P "Show Event List?"]
+set show_locations_l10n [lang::message::lookup "" intranet-events.Show_Locations_P "Show Locations?"]
+set show_resources_l10n [lang::message::lookup "" intranet-events.Show_Resources_P "Show Resources?"]
+set show_event_list_l10n [lang::message::lookup "" intranet-events.Show_Event_List_P "Show Event List?"]
 set show_all_users_l10n [lang::message::lookup "" intranet-events.Show_All_Users_P "Show All Users?"]
 
 
