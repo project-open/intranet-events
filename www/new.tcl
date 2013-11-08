@@ -237,6 +237,7 @@ set location_options [im_conf_item_options \
 			  -include_empty_name "" \
 			  -type_id "" \
 			  -status_id "" \
+			  -type_id 81500 \
 			  ]
 
 
