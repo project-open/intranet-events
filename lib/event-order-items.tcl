@@ -59,7 +59,7 @@ from
 		c.cost_type_id = 3703
 	) t
 where	
-	rueckerfasst_units < item_units
+	coalesce(rueckerfasst_units,0) < item_units
 order by
 	company_name,
 	cost_name,
