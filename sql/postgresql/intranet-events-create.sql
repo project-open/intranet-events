@@ -731,18 +731,49 @@ SELECT im_dynfield_widget__new (
 	10007, 'integer', 'generic_sql', 'integer',
 	'
 {custom {sql "
-select  item_id, item_name
-from    im_invoice_items ii,
-        im_costs c
-where   ii.invoice_id = c.cost_id and
-        c.customer_id in (
-             select  company_id
-             from    im_projects
-             where   project_id = :task_id
-        )
+select	ii.item_id,
+	c.nav_order_nr || ''/'' || coalesce(ii.sort_order::text,'''') || '' - '' ||
+		m.material_nr || '' - '' || m.material_name || 
+		'' ('' || round(ii.item_units) || '';'' || round(ii.item_units * coalesce(m.nav_planned_execution_time_hours,0)) || '')'' as name
+from	im_costs c,
+	im_invoice_items ii
+	LEFT OUTER JOIN im_materials m ON (ii.item_material_id = m.material_id)
+where	c.cost_id = ii.invoice_id and
+	c.nav_order_nr in (
+		select	main_p.nav_order_nr
+		from	im_projects main_p
+		where	main_p.tree_sortkey in (
+				select  tree_root_key(task_p.tree_sortkey)
+				from	im_projects task_p
+				where	task_p.project_id = :task_id
+			)
+		)
 "}}
 '
 );
+
+update im_dynfield_widgets 
+set parameters = '
+{custom {sql "
+select	ii.item_id,
+	c.nav_order_nr || ''/'' || coalesce(ii.sort_order::text,'''') || '' - '' ||
+		m.material_nr || '' - '' || m.material_name || 
+		'' ('' || round(ii.item_units) || '';'' || round(ii.item_units * coalesce(m.nav_planned_execution_time_hours,0)) || '')'' as name
+from	im_costs c,
+	im_invoice_items ii
+	LEFT OUTER JOIN im_materials m ON (ii.item_material_id = m.material_id)
+where	c.cost_id = ii.invoice_id and
+	c.nav_order_nr in (
+		select	main_p.nav_order_nr
+		from	im_projects main_p
+		where	main_p.tree_sortkey in (
+				select  tree_root_key(task_p.tree_sortkey)
+				from	im_projects task_p
+				where	task_p.project_id = :task_id
+			)
+		)
+"}}
+';
 
 
 SELECT im_dynfield_attribute_new ('im_timesheet_task', 'nav_order_item_id', 'Order Item', 'solidline_task_order_item', 'integer', 'f', 100, 'f');
