@@ -783,7 +783,8 @@ order by
 	c.cost_name,
 	ii.sort_order
 "}}
-';
+'
+where widget_name = 'solidline_task_order_item';
 
 
 SELECT im_dynfield_attribute_new ('im_timesheet_task', 'nav_order_item_id', 'Order Item', 'solidline_task_order_item', 'integer', 'f', 100, 'f');
