@@ -20,6 +20,7 @@ ad_page_contract {
 # ---------------------------------------------------------------
 
 set current_user_id [ad_maybe_redirect_for_registration]
+if {"" == $customer_id} { ad_returnredirect $return_url }
 im_event_permissions $current_user_id $event_id view read write admin
 if {!$write} {
     ad_return_complaint 1 "You don't have the right to modify this event"
