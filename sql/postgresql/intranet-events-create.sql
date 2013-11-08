@@ -723,6 +723,13 @@ SELECT im_dynfield_attribute_new ('im_event', 'event_status_id', 'Status', 'even
 SELECT im_dynfield_attribute_new ('im_event', 'event_material_id', 'Material', 'materials', 'integer', 'f', 100, 't');
 
 
+alter table im_events
+add column event_cost_center_id integer
+constraint im_events_cost_center_fk references im_cost_centers;
+
+SELECT im_dynfield_attribute_new ('im_event', 'event_cost_center_id', 'Cost Center', 'cost_centers', 'integer', 'f', 120, 'f');
+
+
 
 -- DynField for Timesheet Tasks to show the NAV OrderItem
 SELECT im_dynfield_widget__new (
@@ -772,6 +779,9 @@ where	c.cost_id = ii.invoice_id and
 				where	task_p.project_id = :task_id
 			)
 		)
+order by
+	c.cost_name,
+	ii.sort_order
 "}}
 ';
 
