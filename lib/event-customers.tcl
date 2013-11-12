@@ -24,7 +24,7 @@ list::create \
     -multirow customer_list_multirow \
     -key company_id \
     -orderby_name "customers_orderby" \
-    -no_data "No customer associated yet" \
+    -no_data [lang::message::lookup "" intranet-events.No_customer_associated_yet "No customer associated yet"] \
     -elements {
 	company_name { 
 	    label "Name" 

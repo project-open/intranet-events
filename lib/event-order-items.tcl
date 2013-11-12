@@ -79,6 +79,7 @@ set rueckerfasst_units_l10n [lang::message::lookup "" intranet-events.Rueckerfas
 set other_events_units_l10n [lang::message::lookup "" intranet-events.Other_Event_Units "Other Event Units"]
 set item_sort_order_l10n [lang::message::lookup "" intranet-events.Item_Sort_Order "Item Sort Order"]
 set no_open_order_items_l10n [lang::message::lookup "" intranet-events.No_open_order_items_available "No open order items available"]
+set planned_units_l10n [lang::message::lookup "" intranet-events.Planned_Units "Planned Units"]
 
 list::create \
     -name order_item_list \
@@ -113,7 +114,7 @@ list::create \
 	    label $other_events_units_l10n
 	}
 	order_item_units { 
-	    label "Planned Units" 
+	    label $planned_units_l10n
 	    display_template {
 		<input type=textbox size=5 name=order_item_units.@order_item_list_multirow.item_id@ value="@order_item_list_multirow.order_item_amount@">
 	    }

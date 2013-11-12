@@ -392,7 +392,7 @@ if { ![empty_string_p $event_name] && $event_name != "" } {
 set letter [string toupper $letter]
 
 if { ![empty_string_p $letter] && [string compare $letter "ALL"] != 0 && [string compare $letter "SCROLL"] != 0 } {
-    lappend criteria "im_first_letter_default_to_a(p.project_name) = upper(:letter)"
+    lappend criteria "im_first_letter_default_to_a(e.event_name) = upper(:letter)"
 }
 
 switch $mine_p {

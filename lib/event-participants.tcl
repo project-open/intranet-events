@@ -74,12 +74,13 @@ set last_name_l10n [lang::message::lookup "" intranet-core.Last_Name "Last Name"
 set email_l10n [lang::message::lookup "" intranet-core.Email Email]
 set company_l10n [lang::message::lookup "" intranet-core.Company Company]
 set comment_l10n [lang::message::lookup "" intranet-core.Comment Comment]
+set status_l10n [lang::message::lookup "" intranet-core.Status Status]
 
 list::create \
     -name participant_list \
     -multirow participant_list_multirow \
     -key company_id \
-    -no_data "No participant associated yet" \
+    -no_data [lang::message::lookup "" intranet-events.No_participant_associated_yet "No participant associated yet"] \
     -orderby_name "participant_orderby" \
     -elements {
 	company_name {
@@ -99,7 +100,7 @@ list::create \
 	    link_url_col participant_url
 	}
 	participant_status {
-	    label "Status" 
+	    label "$status_l10n" 
 	    display_template {
 		<select name=participant_status_id.@participant_list_multirow.participant_id@>
 		<option value=[im_event_participant_status_reserved] @participant_list_multirow.reserved_enabled@>Reserved</option>
