@@ -1338,23 +1338,24 @@ ad_proc im_event_color_for_assignation {
     }
     if {$percentage < 0} { set percentage 0.0 }
     if {$percentage > 100} { set percentage 100.0 }
-    set value [expr int($percentage / 10.0)]
 
-    switch $value {
-	0 { return "" }
-	1 { return "00002F" }
-	2 { return "00004F" }
-	3 { return "00006F" }
-	4 { return "00008F" }
-	5 { return "00009F" }
-	6 { return "0000AF" }
-	7 { return "0000DF" }
-	8 { return "0000EF" }
-	9 { return "0000FF" }
-	10 { return "0000FF" }
-    }
+    # Increase percentage by a base 25%
+    set percentage [expr 0.8 * ($percentage + 25.0)]
 
-    return "FF0000"
+    set hex_list {0 1 2 3 4 5 6 7 8 9 A B C D E F}
+    set r [expr int(255.0 * $percentage / 100.0)]
+    set g $r
+    set b 255
+
+    set color ""
+    append color [lindex $hex_list [expr $r / 16]]
+    append color [lindex $hex_list [expr $r % 16]]
+    append color [lindex $hex_list [expr $g / 16]]
+    append color [lindex $hex_list [expr $g % 16]]
+    append color [lindex $hex_list [expr $b / 16]]
+    append color [lindex $hex_list [expr $b % 16]]
+
+    return $color
 }
 
 
