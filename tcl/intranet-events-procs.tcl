@@ -555,7 +555,14 @@ ad_proc im_event_cube {
 			LEFT OUTER JOIN im_conf_items ci ON (e.event_location_id = ci.conf_item_id)
 		where	e.event_location_id = ci.conf_item_id and
 			ci.conf_item_name is not null and
-			ci.conf_item_status_id not in ([im_conf_item_status_deleted])
+			ci.conf_item_status_id not in ([im_conf_item_status_deleted]) and
+			(
+				e.event_start_date <= :report_end_date::date and
+				e.event_end_date >= :report_start_date::date
+			OR	1 = :report_show_all_users_p
+			)
+
+
 		order by ci.conf_item_name
 	"]
     }
@@ -856,6 +863,8 @@ ad_proc im_event_cube {
     }
 
     # Locations
+
+    ad_return_complaint 1 "<pre>[join $location_list "<br>"]</pre>"
     foreach location_tuple $location_list {
 	set location_id [lindex $location_tuple 0]
 	set location_name [lindex $location_tuple 1]
