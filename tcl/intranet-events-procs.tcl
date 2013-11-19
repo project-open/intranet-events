@@ -643,6 +643,7 @@ ad_proc im_event_cube {
 	    set key "$event_location_id-$event_ansi"
 	    if {[info exists collision_checker_hash($key)]} { set events $collision_checker_hash($key) }
 	    lappend events $event_id
+	    set events [lsort -unique $events]
 	    set collision_checker_hash($key) $events
 	}
 
@@ -863,8 +864,6 @@ ad_proc im_event_cube {
     }
 
     # Locations
-
-    ad_return_complaint 1 "<pre>[join $location_list "<br>"]</pre>"
     foreach location_tuple $location_list {
 	set location_id [lindex $location_tuple 0]
 	set location_name [lindex $location_tuple 1]
