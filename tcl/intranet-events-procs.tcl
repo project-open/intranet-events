@@ -446,7 +446,14 @@ ad_proc im_event_cube {
 	lappend criteria "e.event_location_id = '$event_location_id'"
     }
     if {"" != $event_name} {
-	lappend criteria "lower(e.event_name) like lower('%$event_name%')"
+	set event_name_norm [db_string norm_event_name "select norm_text(:event_name)"]
+	set event_name_ts [join $event_name_norm " & "]
+	lappend criteria "e.event_id in (
+		select	so.object_id
+		from	im_search_objects so
+		where	so.object_type_id = 10 and	-- im_event object type
+			so.fti @@ to_tsquery(:event_name_ts)
+	)"
     }
 
     switch $report_user_selection {
