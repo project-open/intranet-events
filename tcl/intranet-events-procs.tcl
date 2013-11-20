@@ -550,6 +550,7 @@ ad_proc im_event_cube {
 		select distinct
 			ci.conf_item_id as location_id,
 			ci.conf_item_name as location_name,
+			ci.conf_item_nr as location_nr,
 			ci.room_number_seats as location_number_seats,
 			coalesce(ci.description, '') || ' ' || coalesce(ci.note, '') as location_note
 		from	im_events e
@@ -879,8 +880,9 @@ ad_proc im_event_cube {
     foreach location_tuple $location_list {
 	set location_id [lindex $location_tuple 0]
 	set location_name [lindex $location_tuple 1]
-	set location_seats [lindex $location_tuple 2]
-	set location_note [lindex $location_tuple 3]
+	set location_nr [lindex $location_tuple 2]
+	set location_seats [lindex $location_tuple 3]
+	set location_note [lindex $location_tuple 4]
 
 	foreach day $day_list {
 	    set date_date [lindex $day 0]
@@ -1074,9 +1076,10 @@ ad_proc im_event_cube {
 	append table_body "<tr $bgcolor([expr $row_ctr % 2])>\n"
 	set location_id [lindex $location_tuple 0]
 	set location_name [lindex $location_tuple 1]
-	set location_seats [lindex $location_tuple 2]
-	set location_note [lindex $location_tuple 3]
-	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]' title='$location_note'>$location_name ($location_seats)</a></nobr></td>\n"
+	set location_nr [lindex $location_tuple 2]
+	set location_seats [lindex $location_tuple 3]
+	set location_note [lindex $location_tuple 4]
+	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]' title='$location_note'>$location_nr - $location_name ($location_seats)</a></nobr></td>\n"
 
 	# Deal with the events starting before the actual reporting interval
 	set events [list]
@@ -1310,7 +1313,7 @@ ad_proc im_event_cube_render_event {
     # What to show on a mouse-over
     set event_title "[lang::message::lookup "" intranet-events.Name Name]: $event_name
 [lang::message::lookup "" intranet-events.Nr "Nr."]: $event_nr
-[lang::message::lookup "" intranet-events.Location Location]: $event_location_name
+[lang::message::lookup "" intranet-events.Location Location]: $event_location_nr - $event_location_name
 [lang::message::lookup "" intranet-events.Material Material]: $event_material_nr
 [lang::message::lookup "" intranet-events.Start Start]: $event_start_date
 [lang::message::lookup "" intranet-events.End End]: $event_end_date
