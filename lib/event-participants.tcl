@@ -39,9 +39,9 @@ set participant_options [db_list_of_lists participant_options "
 			select	object_id_two
 			from	acs_rels
 			where	object_id_one = :event_id     
-		) and
+		)
 		-- Exclude already existing members
-		u.user_id not in (
+		and u.user_id not in (
 			select	u.user_id
 			from	users u,
 				acs_rels r,

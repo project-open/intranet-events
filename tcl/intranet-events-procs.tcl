@@ -601,7 +601,9 @@ ad_proc im_event_cube {
 		e.event_end_date::date as end_d,
 		(e.event_end_date::date - e.event_start_date::date + 1) as event_duration,
 		im_biz_object_member__list(e.event_id) as event_members,
-		CASE WHEN e.event_start_date < :report_start_date THEN 1 ELSE 0 END as event_starts_before_report_p
+		CASE WHEN e.event_start_date < :report_start_date THEN 1 ELSE 0 END as event_starts_before_report_p,
+		im_material_nr_from_id(e.event_material_id) as event_material_nr,
+		im_cost_center_code_from_id(e.event_cost_center_id) as event_cost_center_code
 	from	acs_objects o,
 		im_events e
 		LEFT OUTER JOIN acs_rels r ON (r.object_id_one = e.event_id)
@@ -648,11 +650,15 @@ ad_proc im_event_cube {
 	    set collision_checker_hash($key) $events
 	}
 
+	# Split event members (just im_biz_object_member) into
+	# customers and employees
 	set event_members_pretty [list]
 	set event_members_customers [list]
+	set event_members_types [list]
 	foreach tuple $event_members {
 	    set member_id [lindex $tuple 0]
-	    lappend event_members_pretty [util_memoize [list im_name_from_user_id $member_id]]
+	    lappend event_members_pretty [util_memoize [list im_name_from_user_id $member_id] 3600]
+	    lappend event_members_types [util_memoize [list db_string otype "select object_type from acs_objects where object_id = $member_id" -default ""] 3600]
 
 	    set customer [util_memoize [list db_string cust "
 		select	min(company_name)
@@ -660,9 +666,11 @@ ad_proc im_event_cube {
 			im_companies c
 		where	r.object_id_one = c.company_id and
 			r.object_id_two = $member_id
-	    " -default ""]]
+	    " -default ""] 3600]
 	    lappend event_members_customers $customer
 	}
+
+#	ad_return_complaint 1 "event_members: $event_members<br>event_customers: $event_members_customers<br>event_members_pretty: $event_members_pretty"
 
 	set event_start_hash($key) $event_id
 	set event_info_hash($event_id) [list \
@@ -680,6 +688,9 @@ ad_proc im_event_cube {
 					    event_members $event_members \
 					    event_members_pretty $event_members_pretty \
 					    event_members_customers $event_members_customers \
+					    event_members_types $event_members_types \
+					    event_material_nr $event_material_nr \
+					    event_cost_center_code $event_cost_center_code \
 					   ]
 
 	# Remember the events that starting before the report interval
@@ -1228,6 +1239,9 @@ ad_proc im_event_cube_render_event {
     set event_members $event_local_info(event_members)
     set event_members_pretty $event_local_info(event_members_pretty)
     set event_members_customers $event_local_info(event_members_customers)
+    set event_members_types $event_local_info(event_members_types)
+    set event_material_nr $event_local_info(event_material_nr)
+    set event_cost_center_code $event_local_info(event_cost_center_code)
     set event_url [export_vars -base "/intranet-events/new" {{form_mode display} event_id}]
 
     set cell_width [parameter::get -package_id [apm_package_id_from_key intranet-events] -parameter "EventCubeCellWidth" -default 25]
@@ -1240,11 +1254,23 @@ ad_proc im_event_cube_render_event {
 	set role_id [lindex $rel_tuple_id 1]
 	set user_name [lindex $event_members_pretty $i]
 	set customer [lindex $event_members_customers $i]
+	set otype [lindex $event_members_types $i]
 
-	switch $role_id {
-	    1300 { lappend customers "$customer - $user_name" }
-	    1307 - 1308 { lappend consultants $user_name }
-	    default { ad_return_complaint 1 "im_event_cube_render_event: unknown role: $role_id" }
+	switch $otype {
+	    user - person {
+		switch $role_id {
+		    1300 { lappend customers "$customer - $user_name" }
+		    1307 - 1308 { lappend consultants $user_name }
+		    default { ad_return_complaint 1 "im_event_cube_render_event: unknown role: $role_id" }
+		}
+	    }
+	    im_conf_item {
+		# These are the laptops and other resources associated with the event
+		# Ignore at the moment
+	    }
+	    default {
+		ad_return_complaint 1 "im_event_cube_render_event: unknown object_type: $otype"
+	    }
 	}
     }
 
@@ -1283,16 +1309,16 @@ ad_proc im_event_cube_render_event {
 
     # What to show on a mouse-over
     set event_title "[lang::message::lookup "" intranet-events.Name Name]: $event_name
-[lang::message::lookup "" intranet-events.Nr Nr]: $event_nr
+[lang::message::lookup "" intranet-events.Nr "Nr."]: $event_nr
 [lang::message::lookup "" intranet-events.Location Location]: $event_location_name
+[lang::message::lookup "" intranet-events.Material Material]: $event_material_nr
 [lang::message::lookup "" intranet-events.Start Start]: $event_start_date
 [lang::message::lookup "" intranet-events.End End]: $event_end_date
-[lang::message::lookup "" intranet-events.Duration Duration]: $event_duration [lang::message::lookup "" intranet-events.Days Days]
-[lang::message::lookup "" intranet-events.Status Status]: [im_category_from_id $event_status_id]
+[lang::message::lookup "" intranet-events.Cost_Center "Cost Center"]: $event_cost_center_code
 [lang::message::lookup "" intranet-events.Consultants Consultants]:
-	[join $consultants "\n\t"]
+[join $consultants "\n"]
 [lang::message::lookup "" intranet-events.Customers Customers]:
-	[join $customers "\n\t"]
+[join $customers "\n"]
 "
 
     set bordercolor "yellow"

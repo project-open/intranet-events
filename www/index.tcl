@@ -18,7 +18,7 @@ ad_page_contract {
     { event_type_id:integer 0 } 
     { event_material_id:integer 0 } 
     { event_location_id:integer 0 } 
-    { event_creator_id:integer 0 } 
+    { event_creator_id:integer "" } 
     { customer_id:integer 0 } 
     { customer_contact_id:integer 0 } 
     { letter:trim "" }
@@ -839,8 +839,7 @@ if {"" == $dashboard_column_html} {
 # ---------------------------------------------------------------
 
 set menu_select_label ""
-set event_navbar_html [im_event_navbar $letter "/intranet-events/index" $next_page_url $previous_page_url [list start_idx order_by how_many view_name letter event_status_id] $menu_select_label]
-
+set event_navbar_html [im_event_navbar $letter "/intranet-events/index" $next_page_url $previous_page_url [list form_mode mine_p start_date timescale report_show_users_p report_show_locations_p report_show_resources_p event_name event_status_id event_type_id event_creator_id start_idx order_by how_many view_name] $menu_select_label]
 
 
 # ---------------------------------------------------------------

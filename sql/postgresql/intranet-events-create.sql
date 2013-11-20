@@ -37,7 +37,7 @@ SELECT im_category_new (1307, 'Consultant', 'Intranet Biz Object Role');
 SELECT im_category_new (1308, 'Trainer', 'Intranet Biz Object Role');
 
 update im_categories set category_gif = 'c' where category_id = 1307;
-update im_categories set category_gif = 't' where category_id = 1308;
+update im_categories set category_gif = 'star' where category_id = 1308;
 
 insert into im_biz_object_role_map values ('im_event',null,1300);
 insert into im_biz_object_role_map values ('im_event',null,1307);
