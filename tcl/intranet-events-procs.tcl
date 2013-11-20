@@ -372,6 +372,7 @@ ad_proc -public im_event_navbar {
 	}
     }
     set alpha_bar [im_alpha_bar -prev_page_url $prev_page_url -next_page_url $next_page_url $base_url $default_letter $bind_vars]
+    set alpha_bar ""
 
     # Get the Subnavbar
     set parent_menu_sql "select menu_id from im_menus where label = '$navbar_menu_label'"
