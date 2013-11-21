@@ -396,6 +396,7 @@ ad_proc im_event_cube {
     {-event_status_id "" }
     {-event_type_id "" }
     {-event_material_id "" }
+    {-event_cost_center_id "" }
     {-event_location_id "" }
     {-event_creator_id "" }
     {-event_name "" }
@@ -418,7 +419,7 @@ ad_proc im_event_cube {
     set bgcolor(0) " class=roweven "
     set bgcolor(1) " class=rowodd "
     set name_order [parameter::get -package_id [apm_package_id_from_key intranet-core] -parameter "NameOrder" -default 1]
-    set cell_width [parameter::get -package_id [apm_package_id_from_key intranet-events] -parameter "EventCubeCellWidth" -default 25]
+    set cell_width [parameter::get -package_id [apm_package_id_from_key intranet-events] -parameter "EventCubeCellWidth" -default 50]
 
     if {-1 == $event_type_id} { set event_type_id "" }
     set report_start_date_julian [im_date_ansi_to_julian $report_start_date]
@@ -442,6 +443,9 @@ ad_proc im_event_cube {
     if {"" != $event_material_id && 0 != $event_material_id} {
 	lappend criteria "e.event_material_id = '$event_material_id'"
     }
+    if {"" != $event_cost_center_id && 0 != $event_cost_center_id} {
+	lappend criteria "e.event_cost_center_id = '$event_cost_center_id'"
+    }
     if {"" != $event_location_id && 0 != $event_location_id} {
 	lappend criteria "e.event_location_id = '$event_location_id'"
     }
@@ -461,7 +465,16 @@ ad_proc im_event_cube {
 	    # Nothing
 	}
 	"mine" {
-	    lappend criteria "e.event_id in (select object_id_two from acs_rels where object_id_one = :current_user_id)"
+	    lappend criteria "(
+		e.event_id in (
+			select object_id_two
+			from acs_rels
+			where object_id_one = :current_user_id
+		UNION	select object_id
+			from acs_objects
+			where creation_user = :current_user_id
+		)
+	    )"
 	}
     }
     set where_clause [join $criteria " and\n            "]
@@ -510,8 +523,8 @@ ad_proc im_event_cube {
 		select	user_id,
 			user_name,
 			department,
-			office_id,
-			acs_object__name(office_id) as office_name
+			employee_office_id as office_id,
+			(select office_path from im_offices where office_id = employee_office_id) as office_path
 		from	(
 			select distinct
 				u.user_id as user_id,
@@ -522,7 +535,7 @@ ad_proc im_event_cube {
 						acs_rels r
 					where	r.object_id_one = o.office_id and
 						r.object_id_two = u.user_id
-				) as office_id
+				) as employee_office_id
 			from	users u
 				LEFT OUTER JOIN im_employees emp ON u.user_id = emp.employee_id,
 				acs_rels r,
@@ -547,7 +560,7 @@ ad_proc im_event_cube {
 				)
 				$group_sql
 			) t
-		order by office_name, user_name
+		order by office_path, user_name
 	"]
     }
 
@@ -933,13 +946,27 @@ ad_proc im_event_cube {
     }
       
     # Arrows to move time axis
-    set arrow_days $report_days
+    set arrow_days 7
+    set arrow_double_days $report_days
+
     set arrow_left_report_start_date [db_string left_date "select :report_start_date::date - $arrow_days from dual"]
-    set arrow_right_report_start_date [db_string right_date "select :report_start_date::date + $arrow_days from dual"]
     set arrow_left_url [export_vars -base "/intranet-events/index" [linsert $export_vars_list end [list start_date $arrow_left_report_start_date]]]
+    set arrow_left "<a href=$arrow_left_url>&lt;</a>"
+
+    set arrow_left_double_report_start_date [db_string left_double_date "select :report_start_date::date - $arrow_double_days from dual"]
+    set arrow_left_double_url [export_vars -base "/intranet-events/index" [linsert $export_vars_list end [list start_date $arrow_left_double_report_start_date]]]
+    set arrow_left_double "<a href=$arrow_left_double_url>&lt;&lt;</a>"
+
+    set arrow_right_report_start_date [db_string right_date "select :report_start_date::date + $arrow_days from dual"]
     set arrow_right_url [export_vars -base "/intranet-events/index" [linsert $export_vars_list end [list start_date $arrow_right_report_start_date]]]
-    set arrow_left "<a href=$arrow_left_url>[im_gif arrow_comp_left]</a>"
-    set arrow_right "<a href=$arrow_right_url>[im_gif arrow_comp_right]</a>"
+    set arrow_right "<a href=$arrow_right_url>&gt;</a>"
+
+    set arrow_right_double_report_start_date [db_string right_double_date "select :report_start_date::date + $arrow_double_days from dual"]
+    set arrow_right_double_url [export_vars -base "/intranet-events/index" [linsert $export_vars_list end [list start_date $arrow_right_double_report_start_date]]]
+    set arrow_right_double "<a href=$arrow_right_double_url>&gt;&gt;</a>"
+
+
+
 
 
     # ---------------------------------------------------------------
@@ -947,9 +974,13 @@ ad_proc im_event_cube {
     # ---------------------------------------------------------------
     
     set table_html "<table>\n"
-    
+
+    # Row week of year
     set table_header "<tr class=rowtitle>\n"
-    append table_header "<td class=rowtitle colspan=2>$arrow_left [_ intranet-core.User]</td>\n"
+    append table_header "<td class=rowtitle colspan=2 align=right>$arrow_left_double &nbsp;&nbsp; $arrow_left </td>\n"
+    set cell_span 0
+    set cell_week -1
+    set ctr 0
     foreach day $day_list {
 	set date_date [lindex $day 0]
 	set date_day_of_month [lindex $day 1]
@@ -957,13 +988,41 @@ ad_proc im_event_cube {
 	set date_year [lindex $day 3]
 	set date_weekday [lindex $day 4]
 	set date_week [lindex $day 5]
-	append table_header "<td class=rowtitle><div style=\"width: ${cell_width}px\">$date_month_of_year<br>$date_day_of_month</div></td>\n"
+
+	if {0 == $ctr} { set cell_week $date_week }
+	if {$date_week != $cell_week} {
+	    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+	    set cell_span 1
+	    set cell_week $date_week
+	} else {
+	    incr cell_span
+	}
+	incr ctr
     }
-    append table_header "<td class=rowtitle>$arrow_right</td>\n"
+    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+    append table_header "<td class=rowtitle>$arrow_right &nbsp;&nbsp; $arrow_right_double</td>\n"
     append table_header "</tr>\n"
     append table_html $table_header
 
-    
+
+    # Row with month/day of month
+    set table_header "<tr class=rowtitle>\n"
+    append table_header "<td class=rowtitle colspan=2>[_ intranet-core.User]</td>\n"
+    foreach day $day_list {
+	set date_date [lindex $day 0]
+	set date_day_of_month [lindex $day 1]
+	set date_month_of_year [lindex $day 2]
+	set date_year [lindex $day 3]
+	set date_weekday [lindex $day 4]
+	set date_week [lindex $day 5]
+	append table_header "<td class=rowtitle align=center><div style=\"width: ${cell_width}px\">$date_weekday $date_day_of_month $date_month_of_year</div></td>\n"
+    }
+    append table_header "<td class=rowtitle></td>\n"
+    append table_header "</tr>\n"
+    append table_html $table_header
+
+
+    # Row for each user
     set row_ctr 0
     set table_body ""
     foreach user_tuple $user_list {
@@ -980,8 +1039,7 @@ ad_proc im_event_cube {
 	}
 
 	set office_url [export_vars -base "/intranet/offices/view" {return_url {office_id $user_office_id}}]
-	append table_body "<td><nobr><a href='$office_url'>$user_office_name</a></nobr></td>\n"
-	append table_body "<td bgcolor='$user_color_code'><nobr><a href='[export_vars -base $user_url {user_id}]'>$user_name</a></nobr></td>\n"
+	append table_body "<td bgcolor='$user_color_code' colspan=2><nobr><a href='[export_vars -base $user_url {user_id}]'>$user_name</a></nobr><br><nobr><a href='$office_url'></a>$user_office_name</nobr></td>\n"
 
 	# Deal with the events starting before the actual reporting interval
 	set line_events [list]
@@ -1053,6 +1111,7 @@ ad_proc im_event_cube {
 	append table_body "<td><nobr>[join $line_event_entries ", "]</nobr></td>\n"
 	}
 
+	append table_body "<td bgcolor='$user_color_code' colspan=2><nobr><a href='[export_vars -base $user_url {user_id}]'>$user_name</a></nobr><br><nobr><a href='$office_url'></a>$user_office_name</nobr></td>\n"
 	append table_body "</tr>\n"
 	incr row_ctr
     }
@@ -1063,20 +1122,54 @@ ad_proc im_event_cube {
     # Locations
     # ---------------------------------------------------------------
 
+
+    # Row week of year
     set table_header "<tr class=rowtitle>\n"
-    append table_header "<td class=rowtitle colspan=2>$arrow_left [lang::message::lookup "" intranet-events.Locations Locations]</td>\n"
+    append table_header "<td class=rowtitle colspan=2 align=right>$arrow_left_double &nbsp;&nbsp; $arrow_left </td>\n"
+    set cell_span 0
+    set cell_week -1
+    set ctr 0
     foreach day $day_list {
 	set date_date [lindex $day 0]
 	set date_day_of_month [lindex $day 1]
 	set date_month_of_year [lindex $day 2]
 	set date_year [lindex $day 3]
-	append table_header "<td class=rowtitle>$date_month_of_year<br>$date_day_of_month</td>\n"
+	set date_weekday [lindex $day 4]
+	set date_week [lindex $day 5]
+
+	if {0 == $ctr} { set cell_week $date_week }
+	if {$date_week != $cell_week} {
+	    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+	    set cell_span 1
+	    set cell_week $date_week
+	} else {
+	    incr cell_span
+	}
+	incr ctr
     }
-    append table_header "<td class=rowtitle>$arrow_right</td>\n"
+    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+    append table_header "<td class=rowtitle>$arrow_right &nbsp;&nbsp; $arrow_right_double</td>\n"
     append table_header "</tr>\n"
     append table_html $table_header
 
-    
+
+    # Row Date
+    set table_header "<tr class=rowtitle>\n"
+    append table_header "<td class=rowtitle colspan=2>[lang::message::lookup "" intranet-events.Locations Locations]</td>\n"
+    foreach day $day_list {
+	set date_date [lindex $day 0]
+	set date_day_of_month [lindex $day 1]
+	set date_month_of_year [lindex $day 2]
+	set date_year [lindex $day 3]
+	# append table_header "<td class=rowtitle>$date_month_of_year<br>$date_day_of_month</td>\n"
+	append table_header "<td class=rowtitle align=center><div style=\"width: ${cell_width}px\">$date_weekday $date_day_of_month $date_month_of_year</div></td>\n"
+    }
+    append table_header "<td class=rowtitle></td>\n"
+    append table_header "</tr>\n"
+    append table_html $table_header
+
+
+    # Rows for each location
     set row_ctr 0
     set table_body ""
     foreach location_tuple $location_list {
@@ -1086,7 +1179,7 @@ ad_proc im_event_cube {
 	set location_nr [lindex $location_tuple 2]
 	set location_seats [lindex $location_tuple 3]
 	set location_note [lindex $location_tuple 4]
-	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]' title='$location_note'>$location_nr - $location_name ($location_seats)</a></nobr></td>\n"
+	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]' title='${location_name}\n${location_note}'>$location_nr ($location_seats)</a></nobr></td>\n"
 
 	# Deal with the events starting before the actual reporting interval
 	set events [list]
@@ -1133,6 +1226,7 @@ ad_proc im_event_cube {
 	    
 	    append table_body [im_event_cube_render_cell -value $value -event_html $event_html]
 	}
+	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]' title='${location_name}\n${location_note}'>$location_nr ($location_seats)</a></nobr></td>\n"
 	append table_body "</tr>\n"
 	incr row_ctr
     }
@@ -1144,16 +1238,47 @@ ad_proc im_event_cube {
     # Resources
     # ---------------------------------------------------------------
 
+    # Row week of year
     set table_header "<tr class=rowtitle>\n"
-    append table_header "<td class=rowtitle colspan=2>$arrow_left [lang::message::lookup "" intranet-events.Resources Resources]</td>\n"
+    append table_header "<td class=rowtitle colspan=2 align=right>$arrow_left_double &nbsp;&nbsp; $arrow_left </td>\n"
+    set cell_span 0
+    set cell_week -1
+    set ctr 0
     foreach day $day_list {
 	set date_date [lindex $day 0]
 	set date_day_of_month [lindex $day 1]
 	set date_month_of_year [lindex $day 2]
 	set date_year [lindex $day 3]
-	append table_header "<td class=rowtitle>$date_month_of_year<br>$date_day_of_month</td>\n"
+	set date_weekday [lindex $day 4]
+	set date_week [lindex $day 5]
+
+	if {0 == $ctr} { set cell_week $date_week }
+	if {$date_week != $cell_week} {
+	    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+	    set cell_span 1
+	    set cell_week $date_week
+	} else {
+	    incr cell_span
+	}
+	incr ctr
     }
-    append table_header "<td class=rowtitle>$arrow_right</td>\n"
+    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+    append table_header "<td class=rowtitle>$arrow_right &nbsp;&nbsp; $arrow_right_double</td>\n"
+    append table_header "</tr>\n"
+    append table_html $table_header
+
+    # Row Date
+    set table_header "<tr class=rowtitle>\n"
+    append table_header "<td class=rowtitle colspan=2>[lang::message::lookup "" intranet-events.Resources Resources]</td>\n"
+    foreach day $day_list {
+	set date_date [lindex $day 0]
+	set date_day_of_month [lindex $day 1]
+	set date_month_of_year [lindex $day 2]
+	set date_year [lindex $day 3]
+	# append table_header "<td class=rowtitle>$date_month_of_year<br>$date_day_of_month</td>\n"
+	append table_header "<td class=rowtitle align=center><div style=\"width: ${cell_width}px\">$date_weekday $date_day_of_month $date_month_of_year</div></td>\n"
+    }
+    append table_header "<td class=rowtitle></td>\n"
     append table_header "</tr>\n"
     append table_html $table_header
 
@@ -1214,6 +1339,7 @@ ad_proc im_event_cube {
 	    
 	    append table_body [im_event_cube_render_cell -value $value -event_html $event_html]
 	}
+	append table_body "<td colspan=2><nobr><a href='[export_vars -base $resource_url {{conf_item_id $resource_id} {form_mode display}}]' title='$resource_note'>$resource_name</a></nobr></td>\n"
 	append table_body "</tr>\n"
 	incr row_ctr
     }
@@ -1254,7 +1380,7 @@ ad_proc im_event_cube_render_event {
     set event_cost_center_code $event_local_info(event_cost_center_code)
     set event_url [export_vars -base "/intranet-events/new" {{form_mode display} event_id}]
 
-    set cell_width [parameter::get -package_id [apm_package_id_from_key intranet-events] -parameter "EventCubeCellWidth" -default 25]
+    set cell_width [parameter::get -package_id [apm_package_id_from_key intranet-events] -parameter "EventCubeCellWidth" -default 50]
 
     set consultants [list]
     set customers [list]

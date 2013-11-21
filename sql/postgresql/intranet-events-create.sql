@@ -297,19 +297,44 @@ create or replace function im_events_tsearch ()
 returns trigger as $$
 declare
 	v_string	varchar;
+	row		record;
 begin
 	select	coalesce(e.event_name, '') || ' ' ||
 		coalesce(e.event_nr, '') || ' ' ||
 		coalesce(e.event_description, '') || ' ' ||
+		coalesce(im_category_from_id(e.event_status_id), '') || ' ' ||
+		coalesce(im_category_from_id(e.event_type_id), '') || ' ' ||
 		coalesce(m.material_name, '') || ' ' ||
 		coalesce(m.material_nr, '') || ' ' ||
+		coalesce(cc.cost_center_name, '') || ' ' ||
+		coalesce(cc.cost_center_code, '') || ' ' ||
 		coalesce(ci.conf_item_name, '') || ' ' ||
 		coalesce(ci.conf_item_nr, '')
 	into    v_string
 	from    im_events e
 		LEFT OUTER JOIN im_materials m ON (e.event_material_id = m.material_id)
+		LEFT OUTER JOIN im_cost_centers cc ON (e.event_cost_center_id = cc.cost_center_id)
 		LEFT OUTER JOIN im_conf_items ci ON (e.event_location_id = ci.conf_item_id)
 	where   e.event_id = new.event_id;
+
+	FOR row IN
+	    	select	*
+		from	acs_rels r
+		where	r.object_id_one = new.event_id
+	LOOP
+		v_string := v_string || ' ' || coalesce(acs_object__name(row.object_id_two), '');
+	END LOOP;
+
+	FOR row IN
+	    	select distinct ii.nav_aufgabe_nr
+		from	im_event_order_item_rels oeoir,
+			im_invoice_items ii
+		where	oeoir.order_item_id = ii.item_id and
+			oeoir.event_id = new.event_id
+		order by ii.nav_aufgabe_nr
+	LOOP
+		v_string := v_string || ' ' || coalesce(row.nav_aufgabe_nr, '');
+	END LOOP;
 
 	RAISE INFO 'im_events_tsearch: %', v_string;
 	perform im_search_update(new.event_id, 'im_event', new.event_id, v_string);
@@ -668,7 +693,7 @@ insert into im_view_columns (column_id, view_id, sort_order, column_name, column
 (97050,970,50,'Start','$event_start_date_formatted');
 
 insert into im_view_columns (column_id, view_id, sort_order, column_name, column_render_tcl) values
-(97060,970,60,'Duration','$event_duration_days');
+(97055,970,55,'Duration','$event_duration_days');
 
 insert into im_view_columns (column_id, view_id, sort_order, column_name, column_render_tcl) values
 (97070,970,70,'Location','$event_location_name');
@@ -681,6 +706,14 @@ insert into im_view_columns (column_id, view_id, sort_order, column_name, column
 
 insert into im_view_columns (column_id, view_id, sort_order, column_name, column_render_tcl) values
 (97090,970,90,'Status','$event_status');
+
+insert into im_view_columns (column_id, view_id, sort_order, column_name, column_render_tcl) values
+(97092,970,92,'Cost Center','$event_cost_center_name');
+
+insert into im_view_columns (column_id, view_id, sort_order, column_name, column_render_tcl) values
+(97094,970,94,'Occupation','$event_occupation');
+
+
 
 
 

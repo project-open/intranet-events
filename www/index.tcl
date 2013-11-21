@@ -17,6 +17,7 @@ ad_page_contract {
     { event_status_id:integer "" } 
     { event_type_id:integer 0 } 
     { event_material_id:integer 0 } 
+    { event_cost_center_id:integer 0 } 
     { event_location_id:integer 0 } 
     { event_creator_id:integer "" } 
     { customer_id:integer 0 } 
@@ -49,6 +50,7 @@ set event_name_org $event_name
 set event_type_id_org $event_type_id
 set event_status_id_org $event_status_id
 set event_material_id_org $event_material_id
+set event_cost_center_id_org $event_cost_center_id
 set event_location_id_org $event_location_id
 
 set next_page_url ""
@@ -275,6 +277,21 @@ set event_creator_options [db_list_of_lists event_creators "
 "]
 set event_creator_options [linsert $event_creator_options 0 [list "" ""]]
 
+set material_options [im_material_options \
+			 -restrict_to_status_id 0 \
+			 -restrict_to_type_id 0 \
+			 -restrict_to_uom_id 0 \
+			 -include_empty 1 \
+			 -show_material_codes_p 1 \
+]
+
+set cost_center_options [im_cost_center_options \
+			     -include_empty 1 \
+			     -include_empty_name "" \
+			     -department_only_p 0 \
+			     -cost_type_id "" \
+]
+
 
 ad_form \
     -name $form_id \
@@ -290,10 +307,10 @@ ad_form \
 	{report_show_locations_p:integer(checkbox),optional {label "$show_locations_l10n"} {options {{"" 1}}} }
 	{report_show_resources_p:integer(checkbox),optional {label "$show_resources_l10n"} {options {{"" 1}}} }
 	{report_show_event_list_p:integer(checkbox),optional {label "$show_event_list_l10n"} {options {{"" 1}}} }
-
 	{report_show_all_users_p:integer(checkbox),optional {label "$show_all_users_l10n"} {options {{"" 1}}} }
-
 	{event_name:text(text),optional {label "[_ intranet-core.Name]"} {html {size 12}}}
+	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options} }
+	{event_cost_center_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Cost_Center {Cost Center}]"} {options $cost_center_options} }
 	{event_status_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Status Status]"} {custom {category_type "Intranet Event Status" translate_p 1 package_key "intranet-core"}} }
     }
 
@@ -305,18 +322,21 @@ if {$view_events_all_p} {
 
     template::element::set_value $form_id event_status_id $event_status_id
     template::element::set_value $form_id event_type_id $event_type_id
+
 }
 
 template::element::set_value $form_id mine_p $mine_p
 template::element::set_value $form_id start_date $start_date
 template::element::set_value $form_id timescale $timescale
 
+template::element::set_value $form_id event_material_id $event_material_id
+template::element::set_value $form_id event_cost_center_id $event_cost_center_id
+
 template::element::set_value $form_id report_show_users_p [im_opt_val report_show_users_p]
 template::element::set_value $form_id report_show_locations_p [im_opt_val report_show_locations_p]
 template::element::set_value $form_id report_show_resources_p [im_opt_val report_show_resources_p]
 template::element::set_value $form_id report_show_event_list_p [im_opt_val report_show_event_list_p]
 template::element::set_value $form_id report_show_all_users_p [im_opt_val report_show_all_users_p]
-
 
 im_dynfield::append_attributes_to_form \
     -object_type $object_type \
@@ -361,6 +381,10 @@ if { [empty_string_p $event_material_id] == 0 && $event_material_id != 0 } {
     lappend criteria "e.event_material_id = :event_material_id"
 }
 
+if { [empty_string_p $event_cost_center_id] == 0 && $event_cost_center_id != 0 } {
+    lappend criteria "e.event_cost_center_id = :event_cost_center_id"
+}
+
 if { [empty_string_p $event_creator_id] == 0 && $event_creator_id != 0 } {
     lappend criteria "e.event_id in (select object_id from acs_objects where creation_user = :event_creator_id)"
 }
@@ -378,6 +402,7 @@ if { ![empty_string_p $report_start_date] && $report_start_date != "" } {
 if { ![empty_string_p $report_end_date] && $report_end_date != "" } {
     lappend criteria "e.event_start_date < :report_end_date::timestamptz"
 }
+
 if { ![empty_string_p $event_name] && $event_name != "" } {
     if {0 && ![string isalphanum $event_name]} {
 	ad_return_complaint 1 [lang::message::lookup "" intranet-events.Only_alphanum_allowed "
@@ -385,7 +410,15 @@ if { ![empty_string_p $event_name] && $event_name != "" } {
 	"]
 	ad_script_abort
     }
-    lappend criteria "lower(e.event_name) like lower('%$event_name%')"
+
+    set event_name_norm [db_string norm_event_name "select norm_text(:event_name)"]
+    set event_name_ts [join $event_name_norm " & "]
+    lappend criteria "e.event_id in (
+		select	so.object_id
+		from	im_search_objects so
+		where	so.object_type_id = 10 and	-- im_event object type
+			so.fti @@ to_tsquery(:event_name_ts)
+    )"
 }
 
 
@@ -400,7 +433,14 @@ switch $mine_p {
     "queue" { }
     "mine" {
 	lappend criteria "(
-		e.event_id in (select object_id_two from acs_rels where object_id_one = :current_user_id)
+		e.event_id in (
+			select object_id_two
+			from acs_rels
+			where object_id_one = :current_user_id
+		UNION	select object_id
+			from acs_objects
+			where creation_user = :current_user_id
+		)
 	)"
     }
     "default" { 
@@ -500,11 +540,25 @@ set sql "
 			m.material_name,
 			im_event__participant_list(e.event_id) as event_participant_list,
 			im_event__customer_list(e.event_id) as event_customer_list,
-			acs_object__name(e.event_location_id) as event_location_name
+			loc.conf_item_name as event_location_name,
+			cc.cost_center_name as event_cost_center_name,
+			coalesce(loc.room_number_seats::varchar, '-') as room_number_seats,
+			(select count(*) from acs_rels qr, im_biz_object_members qbom 
+			 where qr.rel_id = qbom.rel_id and qbom.member_status_id = 82200 and
+			 qr.object_id_one = e.event_id and
+			 qr.object_id_two in (select member_id from group_distinct_member_map where group_id = 461)
+			) as room_booked,
+			(select count(*) from acs_rels qr, im_biz_object_members qbom 
+			 where qr.rel_id = qbom.rel_id and qbom.member_status_id = 82210 and
+			 qr.object_id_one = e.event_id and
+			 qr.object_id_two in (select member_id from group_distinct_member_map where group_id = 461)
+			) as room_reserved
 		FROM
 			acs_objects o,
 			im_events e
 			LEFT OUTER JOIN im_materials m ON (e.event_material_id = m.material_id)
+			LEFT OUTER JOIN im_cost_centers cc ON (e.event_cost_center_id = cc.cost_center_id)
+			LEFT OUTER JOIN im_conf_items loc ON (e.event_location_id = loc.conf_item_id)
 			$extra_from
 		WHERE
 			e.event_id = o.object_id
@@ -551,6 +605,10 @@ db_foreach events_info_query $selection -bind $form_vars {
 
     set event_participants_pretty [join $event_participant_list "<br>"]
     set event_customers_pretty [join $event_customer_list "<br>"]
+
+    # Available, booked and reserved seats
+    set event_occupation "${room_number_seats}P ${room_booked}B ${room_reserved}R "
+
 
     # Bulk Action Checkbox
     set action_checkbox "<input type=checkbox name=tid value=$event_id id=event,$event_id>\n"
@@ -701,6 +759,7 @@ if {1 == $report_show_users_p || 1 == $report_show_locations_p || 1 == $report_s
 			 -event_status_id $event_status_id_org \
 			 -event_type_id $event_type_id_org \
 			 -event_material_id $event_material_id_org \
+			 -event_cost_center_id $event_cost_center_id_org \
 			 -event_location_id $event_location_id_org \
 			 -event_creator_id $event_creator_id \
 			 -event_name $event_name_org \
