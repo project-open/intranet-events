@@ -21,7 +21,7 @@ if {![info exists task]} {
     } {
 	event_id:integer,optional
 	{ event_name "" }
-	{ event_nr [im_event::next_event_nr] }
+	{ event_nr "[lang::message::lookup "" intranet-events.Event "Event"] [im_event::next_event_nr] }
 	{ event_sla_id "" }
 	{ event_customer_contact_id "" }
 	{ task_id "" }
@@ -263,7 +263,7 @@ ad_form \
     -export {next_url return_url} \
     -form {
 	event_id:key
-	{event_name:text(text) {label $event_name_label} {html {size 50}}}
+	{event_name:text(hidden),optional {label $event_name_label} {html {size 50}}}
 	{event_nr:text(hidden) {label $event_nr_label} {html {size 30}} }
 	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options}}
 	{event_location_id:text(select) {label "[lang::message::lookup {} intranet-events.Location Location]"} {options $location_options}}
@@ -357,7 +357,21 @@ ad_form -extend -name event -on_request {
     set event_start_date_sql [template::util::date get_property sql_date $event_start_date]
     set event_end_date_sql [template::util::date get_property sql_date $event_end_date]
 
-    set absence_id [db_string event_insert {}]
+    # Logic for automatically calculating an event_name
+    if {"" == $event_name} {
+	set start_date $event_start_date
+	if {[regexp {^([0-9]{4}) ([0-9]{2}) ([0-9]{2})} $event_start_date match year month day]} { set start_date "$year-$month-$day" }
+
+	set end_date $event_end_date
+	if {[regexp {^([0-9]{4}) ([0-9]{2}) ([0-9]{2})} $event_end_date match year month day]} { set end_date "$year-$month-$day" }
+
+	set material_name [acs_object_name $event_material_id]
+	set location_name [acs_object_name $event_location_id]
+	set event_name "$material_name; $location_name; $start_date; $end_date; $event_nr"
+	# Event 35; SolidWorks Erweiterte Bauteilmodellierung; SolidLine Ludwigsburg; 2014-03-03; 2014-03-04
+    }
+
+    set event_id [db_string event_insert {}]
     db_dml event_update {}
     db_dml event_update_acs_object {}
 
@@ -380,9 +394,6 @@ ad_form -extend -name event -on_request {
 	# Determine the first task in the case to be executed and start+finisch the task.
 	im_workflow_skip_first_transition -case_id $case_id
     }
-
-    # Send out notifications?
-    # notification::new -type_id [notification::type::get_type_id -short_name event_notif] -object_id $event_id -response_id "" -notif_subject $event_name -notif_text $message
 
     # Generate im_timesheet_task entries for each event
     im_event::task_sweeper -event_id $event_id
@@ -445,7 +456,7 @@ ad_form -extend -name event -on_request {
 
 } -validate {
     {event_name
-	{ [string length $event_name] < 100 }
+	{ [string length $event_name] < 200 }
 	"[lang::message::lookup {} intranet-events.Event_name_too_long {Event Name too long (max 100 characters).}]" 
     }
     {event_name
@@ -669,6 +680,18 @@ append admin_html [im_menu_ul_list -no_uls 1 "events_admin" {}]
 append admin_html "</ul>"
 
 
+# ----------------------------------------------------------
+# Link with Timesheet Tasks
+# ----------------------------------------------------------
+
+set event_timesheet_task_html ""
+if {[info exists event_id] && "" != $event_id && 0 != $event_id} {
+    set event_timesheet_task_id [db_string ts_task_id "select event_timesheet_task_id from im_events where event_id = :event_id" -default ""]
+    if {"" != $event_timesheet_task_id} {
+	set ts_url [export_vars -base "/intranet-timesheet2-tasks/new" {{task_id $event_timesheet_task_id}}]
+	set event_timesheet_task_html "<a href='$ts_url'>[lang::message::lookup "" intranet-events.See_related_timesheet_task "See related Gantt task"]</a>"
+    }
+}
 
 
 # ----------------------------------------------------------

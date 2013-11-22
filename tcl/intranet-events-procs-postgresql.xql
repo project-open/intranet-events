@@ -6,7 +6,7 @@
 <fullquery name="im_event::task_sweeper.task_insert">
     <querytext>
 	SELECT im_timesheet_task__new (
-		:task_id,		-- p_task_id
+		NULL,			-- p_task_id
 		'im_timesheet_task',	-- object_type
 		now(),			-- creation_date
 		null,			-- creation_user
@@ -31,7 +31,7 @@
 <fullquery name="task_delete">
     <querytext>
     BEGIN
-	PERFORM im_task__delete (:task_id);
+	PERFORM im_task__delete (:event_timesheet_task_id);
 	return 0;
     END;
     </querytext>
@@ -41,13 +41,13 @@
 <fullquery name="im_event::task_sweeper.task_update">
     <querytext>
 	update im_timesheet_tasks set
-		material_id	= :material_id,
-		cost_center_id	= :cost_center_id,
-		uom_id 		= :uom_id,
-		planned_units	= :planned_units,
-		billable_units	= :billable_units
+		material_id		= :material_id,
+		cost_center_id		= :cost_center_id,
+		uom_id 			= :uom_id,
+		planned_units		= :planned_units,
+		billable_units		= :billable_units
 	where
-		task_id = :task_id;
+		task_id = :event_timesheet_task_id;
     </querytext>
 </fullquery>
 
@@ -55,17 +55,17 @@
 <fullquery name="im_event::task_sweeper.project_update">
     <querytext>
 	update im_projects set
-		project_name	= :task_name,
-                parent_id       = :project_id,
-		project_nr	= :task_nr,
-		project_type_id	= :task_type_id,
-		project_status_id = :task_status_id,
-		note		= :note,
-		percent_completed = :percent_completed,
-		start_date      = :event_start_date,
-                end_date        = :event_end_date
+		project_name		= :task_name,
+		parent_id		= :project_id,
+		project_nr		= :task_nr,
+		project_type_id		= :task_type_id,
+		project_status_id	= :task_status_id,
+		note			= :note,
+		percent_completed	= :percent_completed,
+		start_date		= :event_start_date,
+		end_date		= :event_end_date
 	where
-		project_id = :task_id;
+		project_id = :event_timesheet_task_id;
     </querytext>
 </fullquery>
 

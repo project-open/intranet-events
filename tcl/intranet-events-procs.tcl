@@ -38,6 +38,7 @@ namespace eval im_event {
 	{-sweep_mode "full"}
 	{-sweep_last_interval "60 minutes" }
 	{-event_id ""}
+	{-debug_p 1}
     } {
         Periodic sweeper that checks that every event 
 	is represented by a timesheet task with the same members,
@@ -47,6 +48,8 @@ namespace eval im_event {
 	       without task or recently modified events.
         @author frank.bergmann@project-open.com
     } {
+	set debug ""
+
 	# -------------------------------------------------
 	# Determine which events to sweep
 
@@ -78,6 +81,7 @@ namespace eval im_event {
 	# -------------------------------------------------
         # Check the situation of relevant events
 	db_foreach sweep_events $sweep_sql {
+	    lappend debug "task_sweeper: Sweeping event# $event_id"
 
 	    # The year for the event - depends on it's start date
 	    set year [string range $event_start_date 0 3]
@@ -89,6 +93,7 @@ namespace eval im_event {
 		where	project_nr = :year || '_events'
 	    " -default ""]
 	    if {"" == $parent_project_id} {
+		lappend debug "task_sweeper: Did not find project '${year}_events' - creating a new one"
 		set parent_project_id [project::new \
 					   -project_name       "$year Events" \
 					   -project_nr         "${year}_events" \
@@ -105,40 +110,74 @@ namespace eval im_event {
 			where project_id = :parent_project_id
 		"
 	    }
+	    lappend debug "task_sweeper: Event parent project# $parent_project_id"
+
+
+	    # -----------------------------------------------------
+	    # Set all important task fields
 	    set task_nr "event_$event_nr"
 	    set task_name "$event_name ($event_nr)"
 
-	    # -----------------------------------------------------
-	    # Create the timesheet task
-	    set task_id [db_string task_id "
-	    	select	p.project_id
-		from	im_projects p,
-			im_timesheet_tasks t
-		where	p.project_id = t.task_id and
-			p.parent_id = :parent_project_id and
-			p.project_nr = :task_nr
-	    " -default ""]
-
 	    set project_id $parent_project_id
-	    set material_id [im_material_default_material_id]
-	    set cost_center_id ""
+	    set material_id $event_material_id
+	    set cost_center_id $event_cost_center_id
 	    set uom_id [im_uom_hour]
 	    set task_type_id [im_project_type_task]
-	    set task_status_id [im_project_status_open]
 	    set note $event_description
 	    set planned_units 0
 	    set billable_units 0
 	    set percent_completed ""
 
-	    if {"" == $task_id} {
-		set task_id [db_string task_insert {}]
+	    switch $event_status_id {
+		82004 {
+		    # Reserved
+		    set task_status_id [im_project_status_potential]
+		}
+		82002  {
+		    # Planned
+		    set task_status_id [im_project_status_potential]
+		}
+		82006  {
+		    # Booked
+		    set task_status_id [im_project_status_open]
+		}
+		182511  {
+		    # Squared
+		    set task_status_id [im_project_status_open]
+		}
+		default {
+		    set task_status_id [im_project_status_open]
+		}
+	    }
+
+
+	    # -----------------------------------------------------
+	    # Create or update the timesheet task
+	    
+	    # Check if this event doesn't yet have a task associated
+	    if {"" == $event_timesheet_task_id} {
+		# Check if the task already exists
+		set event_timesheet_task_id [db_string task_id "
+		    	select	p.project_id
+			from	im_projects p,
+				im_timesheet_tasks t
+			where	p.project_id = t.task_id and
+				p.parent_id = :parent_project_id and
+				p.project_nr = :task_nr
+	        " -default ""]
+		lappend debug "task_sweeper: Found task #$event_timesheet_task_id for task_nr='$task_nr'"
+	    }
+
+	    if {"" == $event_timesheet_task_id} {
+		lappend debug "task_sweeper: About to create a new task"
+		set event_timesheet_task_id [db_string task_insert {}]
+		lappend debug "task_sweeper: Newly created task #$event_timesheet_task_id"
 	    }
 	    db_dml task_update {}
 	    db_dml project_update {}
-
 	    db_dml update_event "
 		update im_events
-		set event_timesheet_task_id = :task_id
+		set event_timesheet_task_id = :event_timesheet_task_id
 		where event_id = :event_id
 	    "
 
@@ -146,7 +185,8 @@ namespace eval im_event {
 	    # Copy event members to task
 	    set event_member_sql "
 		select	object_id_two as user_id,
-			bom.object_role_id as role_id
+			bom.object_role_id as role_id,
+			bom.percentage
 		from	acs_rels r,
 			im_biz_object_members bom
 		where	r.rel_id = bom.rel_id and
@@ -155,7 +195,7 @@ namespace eval im_event {
 	    "
 	    array set event_member_hash {}
 	    db_foreach event_members $event_member_sql {
-		im_biz_object_add_role -percentage 100 $user_id $task_id $role_id
+		im_biz_object_add_role -percentage $percentage $user_id $event_timesheet_task_id $role_id
 		set event_member_hash($user_id) $role_id
 	    }
 
@@ -167,7 +207,7 @@ namespace eval im_event {
 		from	acs_rels r,
 			im_biz_object_members bom
 		where	r.rel_id = bom.rel_id and
-			object_id_one = :task_id
+			object_id_one = :event_timesheet_task_id
 	    "
 	    array set task_member_hash {}
 	    db_foreach task_members $task_member_sql {
@@ -177,7 +217,7 @@ namespace eval im_event {
 	    foreach uid [array names task_member_hash] {
 		if {![info exists event_member_hash($uid)]} {
 		    db_string delete_membership "
-		    	select im_biz_object_member__delete(:task_id, :uid)
+		    	select im_biz_object_member__delete(:event_timesheet_task_id, :uid)
 		    "
 		}
 	    }
@@ -190,8 +230,9 @@ namespace eval im_event {
 	    "
 
 	    # Write Audit Trail
-	    im_project_audit -project_id $task_id -action after_create
+	    im_project_audit -project_id $event_timesheet_task_id -action after_create
 	}
+	return [join $debug "\n"]
     }
 
     # ----------------------------------------------------------------------
