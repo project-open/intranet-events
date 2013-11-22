@@ -665,7 +665,17 @@ ad_proc im_event_cube {
 		im_biz_object_member__list(e.event_id) as event_members,
 		CASE WHEN e.event_start_date < :report_start_date THEN 1 ELSE 0 END as event_starts_before_report_p,
 		im_material_nr_from_id(e.event_material_id) as event_material_nr,
-		im_cost_center_code_from_id(e.event_cost_center_id) as event_cost_center_code
+		im_cost_center_code_from_id(e.event_cost_center_id) as event_cost_center_code,
+		(select count(*) from acs_rels qr, im_biz_object_members qbom 
+		 where qr.rel_id = qbom.rel_id and qbom.member_status_id = 82200 and
+		 qr.object_id_one = e.event_id and
+		 qr.object_id_two in (select member_id from group_distinct_member_map where group_id = 461)
+		) as event_booked_seats,
+		(select count(*) from acs_rels qr, im_biz_object_members qbom 
+		 where qr.rel_id = qbom.rel_id and qbom.member_status_id = 82210 and
+		 qr.object_id_one = e.event_id and
+		 qr.object_id_two in (select member_id from group_distinct_member_map where group_id = 461)
+		) as event_reserved_seats
 	from	acs_objects o,
 		im_events e
 		LEFT OUTER JOIN acs_rels r ON (r.object_id_one = e.event_id)
@@ -753,6 +763,8 @@ ad_proc im_event_cube {
 					    event_members_types $event_members_types \
 					    event_material_nr $event_material_nr \
 					    event_cost_center_code $event_cost_center_code \
+					    event_booked_seats $event_booked_seats \
+					    event_reserved_seats $event_reserved_seats \
 					   ]
 
 	# Remember the events that starting before the report interval
@@ -1220,7 +1232,7 @@ ad_proc im_event_cube {
 	set location_nr [lindex $location_tuple 2]
 	set location_seats [lindex $location_tuple 3]
 	set location_note [lindex $location_tuple 4]
-	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]' title='${location_name}\n${location_note}'>$location_nr ($location_seats)</a></nobr></td>\n"
+	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]' title='${location_name}\n${location_note}'>$location_nr ($location_seats)</a><br>&nbsp;</nobr></td>\n"
 
 	# Deal with the events starting before the actual reporting interval
 	set events [list]
@@ -1419,6 +1431,9 @@ ad_proc im_event_cube_render_event {
     set event_members_types $event_local_info(event_members_types)
     set event_material_nr $event_local_info(event_material_nr)
     set event_cost_center_code $event_local_info(event_cost_center_code)
+    set event_booked_seats $event_local_info(event_booked_seats)
+    set event_reserved_seats $event_local_info(event_reserved_seats)
+
     set event_url [export_vars -base "/intranet-events/new" {{form_mode display} event_id}]
 
     set cell_width [parameter::get -package_id [apm_package_id_from_key intranet-events] -parameter "EventCubeCellWidth" -default 50]
@@ -1453,22 +1468,28 @@ ad_proc im_event_cube_render_event {
 
     # Calculate the event code
     set kuerzel ""
-    if {"location_list" != $location} { append kuerzel "$event_location_nr" }
-
-    if {"user_list" != $location} { 
-	foreach p $consultants {
-	    set initials ""
-	    foreach n $p { append initials [string range $n 0 0] }
-	    append kuerzel ";$initials"
+    switch $location {
+	"user_list" {
+	    set kuerzel "$event_location_nr; $event_booked_seats; <i>$event_reserved_seats</i><br>$event_material_nr"
 	}
+	"location_list" {
+	    set event_consultant_list [list]
+	    foreach p $consultants {
+		set initials ""
+		foreach n $p { append initials [string range $n 0 0] }
+		lappend event_consultant_list $initials
+	    }
+
+	    set kuerzel "[join $event_consultant_list ";"]; $event_booked_seats; <i>$event_reserved_seats</i><br>$event_material_nr"
+	}
+	"resource_list" {
+	    set kuerzel "$event_location_nr"
+	}
+	default {
+	    ad_return_complaint 1 "im_event_cube_render_event: Unknown location: '$location'"
+	}
+
     }
-
-    append kuerzel ";#[llength event_members_customers]"
-
-
-    # One cell corresponds to some 3.5 letters...
-    set kuerzel [string range $kuerzel 0 [expr int(($event_duration * 3.5) - 1)]]
-
 
     # Deal with "broken" events, that start before the first 
     # column of the report
@@ -1502,11 +1523,11 @@ ad_proc im_event_cube_render_event {
     if {$conflict_p} { set bordercolor "red" }
     set result "
       <div style='position: relative'>
-<div style='position: absolute; top: -12; left: -2; width: $event_width; z-index:10; background: yellow; opacity: 0.8;'>
+<div style='position: absolute; top: -16; left: -4; width: $event_width; z-index:10; background: yellow; opacity: 0.8;'>
 <table cellspacing=0 cellpadding=0 border=2 bgcolor=#$bgcolor bordercolor=$bordercolor width='100%'>
 <tr>
 <td bgcolor=#$bgcolor>
-<nobr><a href=$event_url title='$event_title' target='_blank'>$kuerzel</a></nobr>
+<nobr><a href=$event_url title='$event_title' target='_blank'>$kuerzel</a>&nbsp;</nobr>
 </td>
 </tr>
 </table>
