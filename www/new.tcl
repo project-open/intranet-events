@@ -21,7 +21,7 @@ if {![info exists task]} {
     } {
 	event_id:integer,optional
 	{ event_name "" }
-	{ event_nr "[lang::message::lookup "" intranet-events.Event "Event"] [im_event::next_event_nr] }
+	{ event_nr "[lang::message::lookup {} intranet-events.Event Event] [im_event::next_event_nr]" }
 	{ event_sla_id "" }
 	{ event_customer_contact_id "" }
 	{ task_id "" }
