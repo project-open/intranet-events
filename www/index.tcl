@@ -93,12 +93,36 @@ set show_resources_l10n [lang::message::lookup "" intranet-events.Show_Resources
 set show_event_list_l10n [lang::message::lookup "" intranet-events.Show_Event_List_P "Show Event List?"]
 set show_all_users_l10n [lang::message::lookup "" intranet-events.Show_All_Users_P "Show All Users?"]
 
+set current_year [db_string current_year "select to_char(now(), 'YYYY')"]
+set next_year [db_string current_year "select to_char(now(), 'YYYY')::integer + 1"]
+set previous_year [db_string current_year "select to_char(now(), 'YYYY')::integer - 1"]
+
 
 # ---------------------------------------------------------------
 # Date Scale
 # ---------------------------------------------------------------
 
 switch $timescale {
+    "until_end_of_year" {
+        set report_start_date $today
+        set report_end_date "$current_year-12-31"
+    }
+    "since_start_of_year" {
+        set report_start_date "$current_year-01-01"
+        set report_end_date $today
+    }
+    "current_year" {
+        set report_start_date "$current_year-01-01"
+        set report_end_date "$current_year-12-31"
+    }
+    "next_year" {
+        set report_start_date "$next_year-01-01"
+        set report_end_date "$next_year-12-31"
+    }
+    "previous_year" {
+        set report_start_date "$previous_year-01-01"
+        set report_end_date "$previous_year-12-31"
+    }
     "next_3w" {
         set report_start_date $start_date
         set report_end_date [im_date_julian_to_ansi [expr $start_date_julian + 21]]
@@ -122,6 +146,9 @@ switch $timescale {
     "last_3m" {
         set report_start_date [im_date_julian_to_ansi [expr $start_date_julian - 93]]
         set report_end_date $start_date
+    }
+    default {
+	ad_return_complaint 1 "/intranet-events/index: Unknown timescale '$timescale'"
     }
 }
 
@@ -246,6 +273,11 @@ if {[im_table_exists im_sql_selectors]} {
 set timescale_types [list \
                          "next_3w" [lang::message::lookup "" intranet-timesheet2.Next_3_Weeks "Next 3 Weeks"] \
                          "next_3m" [lang::message::lookup "" intranet-timesheet2.Next_3_Month "Next 3 Months"] \
+			 "until_end_of_year" [lang::message::lookup "" intranet-timesheet2.Until_end_of_year "Until end of year"] \
+			 "current_year" [lang::message::lookup "" intranet-timesheet2.Current_year "Current Year"] \
+			 "next_year" [lang::message::lookup "" intranet-timesheet2.Next_year "Next Year"] \
+			 "previous_year" [lang::message::lookup "" intranet-timesheet2.Previous_year "Previous Year"] \
+			 "since_start_of_year" [lang::message::lookup "" intranet-timesheet2.Since_start_of_year "Since start of year"] \
                          "future" [lang::message::lookup "" intranet-timesheet2.Future "Future"] \
                          "past" [lang::message::lookup "" intranet-timesheet2.Past "Past"] \
                          "last_3m" [lang::message::lookup "" intranet-timesheet2.Last_3_Month "Last 3 Months"] \
