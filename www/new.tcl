@@ -141,6 +141,35 @@ if {"" == $page_title && 0 != $event_type_id} {
 set context [list $page_title]
 
 
+
+# ----------------------------------------------
+# Localization
+# ----------------------------------------------
+
+set mine_all_l10n [lang::message::lookup "" intranet-core.Mine_All "Mine/All"]
+set all_l10n [lang::message::lookup "" intranet-core.All "All"]
+set timescale_l10n [lang::message::lookup "" intranet-events.Timescale "Timescale"]
+
+set show_users_l10n [lang::message::lookup "" intranet-events.Show_Users_P "Show Users?"]
+set show_locations_l10n [lang::message::lookup "" intranet-events.Show_Locations_P "Show Locations?"]
+set show_resources_l10n [lang::message::lookup "" intranet-events.Show_Resources_P "Show Resources?"]
+set show_event_list_l10n [lang::message::lookup "" intranet-events.Show_Event_List_P "Show Event List?"]
+set show_all_users_l10n [lang::message::lookup "" intranet-events.Show_All_Users_P "Show All Users?"]
+
+set current_year [db_string current_year "select to_char(now(), 'YYYY')"]
+set next_year [db_string current_year "select to_char(now(), 'YYYY')::integer + 1"]
+set previous_year [db_string current_year "select to_char(now(), 'YYYY')::integer - 1"]
+set show_users_l10n [lang::message::lookup "" intranet-events.Show_Users_P "Show Users?"]
+set show_locations_l10n [lang::message::lookup "" intranet-events.Show_Locations_P "Show Locations?"]
+set show_resources_l10n [lang::message::lookup "" intranet-events.Show_Resources_P "Show Resources?"]
+set show_event_list_l10n [lang::message::lookup "" intranet-events.Show_Event_List_P "Show Event List?"]
+set show_all_users_l10n [lang::message::lookup "" intranet-events.Show_All_Users_P "Show All Users?"]
+
+set current_year [db_string current_year "select to_char(now(), 'YYYY')"]
+set next_year [db_string current_year "select to_char(now(), 'YYYY')::integer + 1"]
+set previous_year [db_string current_year "select to_char(now(), 'YYYY')::integer - 1"]
+
+
 # ----------------------------------------------
 # Determine event type
 
@@ -265,8 +294,8 @@ ad_form \
 	event_id:key
 	{event_name:text(hidden),optional {label $event_name_label} {html {size 50}}}
 	{event_nr:text(hidden) {label $event_nr_label} {html {size 30}} }
-	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options}}
 	{event_location_id:text(select) {label "[lang::message::lookup {} intranet-events.Location Location]"} {options $location_options}}
+	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options}}
 	{event_start_date:date(date) {label "[_ intranet-timesheet2.Start_Date]"} {format "YYYY-MM-DD"} {after_html {<input type="button" style="height:23px; width:23px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendarWithDateWidget('event_start_date', 'y-m-d');" >}}}
 	{event_end_date:date(date) {label "[_ intranet-timesheet2.End_Date]"} {format "YYYY-MM-DD"} {after_html {<input type="button" style="height:23px; width:23px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendarWithDateWidget('event_end_date', 'y-m-d');" >}}}
 	{event_description:text(textarea),optional,nospell {label "[_ intranet-timesheet2.Description]"} {html {cols 40}}}
@@ -546,6 +575,8 @@ if {$show_components_p} {
 
 
 
+
+
 # ---------------------------------------------------------------
 # Filter with Dynamic Fields
 # ---------------------------------------------------------------
@@ -556,12 +587,46 @@ set object_type "im_event"
 set action_url "/intranet-events/index"
 set form_mode "edit"
 
+set today [db_string today "select now()::date from dual"]
+set start_date $today
+
+
 set mine_p_options {}
-if {[im_permission $current_user_id "view_events_all"]} { 
-    lappend mine_p_options [list [lang::message::lookup "" intranet-events.All "All"] "all" ] 
+if {$view_events_all_p} { 
+    lappend mine_p_options [list $all_l10n "all" ] 
 }
-lappend mine_p_options [list [lang::message::lookup "" intranet-events.My_group "My Group"] "queue"]
 lappend mine_p_options [list [lang::message::lookup "" intranet-events.Mine "Mine"] "mine"]
+
+# Add custom searches to drop-down
+if {[im_table_exists im_sql_selectors]} {
+    set selector_sql "
+	select	s.name, s.short_name
+	from	im_sql_selectors s
+	where	s.object_type = :object_type
+    "
+    db_foreach selectors $selector_sql {
+	lappend mine_p_options [list $name $short_name]
+    }
+}
+
+
+set timescale_types [list \
+                         "next_3w" [lang::message::lookup "" intranet-timesheet2.Next_3_Weeks "Next 3 Weeks"] \
+                         "next_3m" [lang::message::lookup "" intranet-timesheet2.Next_3_Month "Next 3 Months"] \
+			 "until_end_of_year" [lang::message::lookup "" intranet-timesheet2.Until_end_of_year "Until end of year"] \
+			 "current_year" [lang::message::lookup "" intranet-timesheet2.Current_year "Current Year"] \
+			 "next_year" [lang::message::lookup "" intranet-timesheet2.Next_year "Next Year"] \
+			 "previous_year" [lang::message::lookup "" intranet-timesheet2.Previous_year "Previous Year"] \
+			 "since_start_of_year" [lang::message::lookup "" intranet-timesheet2.Since_start_of_year "Since start of year"] \
+                         "future" [lang::message::lookup "" intranet-timesheet2.Future "Future"] \
+                         "past" [lang::message::lookup "" intranet-timesheet2.Past "Past"] \
+                         "last_3m" [lang::message::lookup "" intranet-timesheet2.Last_3_Month "Last 3 Months"] \
+                         "last_3w" [lang::message::lookup "" intranet-timesheet2.Last_3_Weeks "Last 3 Weeks"] \
+]
+foreach { value text } $timescale_types {
+    lappend timescale_options [list $text $value]
+}
+
 
 set event_member_options [util_memoize "db_list_of_lists event_members {
 	select  distinct
@@ -572,30 +637,32 @@ set event_member_options [util_memoize "db_list_of_lists event_members {
 	where   r.object_id_one = p.event_id
 	order by user_name
 }" 300]
-set event_member_options [linsert $event_member_options 0 [list [_ intranet-core.All] ""]]
+set event_member_options [linsert $event_member_options 0 [list $all_l10n ""]]
+set event_creator_options [list]
+set event_creator_options [db_list_of_lists event_creators "
+	select	distinct
+		im_name_from_user_id(creation_user) as creator_name,
+		creation_user as creator_id
+	from	acs_objects
+	where	object_type = :object_type
+	order by creator_name
+"]
+set event_creator_options [linsert $event_creator_options 0 [list "" ""]]
 
-set sla_exists_p 1
+set material_options [im_material_options \
+			 -restrict_to_status_id 0 \
+			 -restrict_to_type_id 0 \
+			 -restrict_to_uom_id 0 \
+			 -include_empty 1 \
+			 -show_material_codes_p 1 \
+]
 
-# No SLA defined for this user?
-# Allow the user to request a new SLA
-if {!$sla_exists_p} {
-
-    # Check if there is already an SLA request
-    set sla_requested_p [db_string sla_requested_p "
-	select	count(*)
-	from	im_events t,
-		acs_objects o
-	where	t.event_id = o.object_id and
-		t.event_type_id = [im_event_type_sla_request] and
-		o.creation_user = :current_user_id and
-		t.event_status_id in (select * from im_sub_categories([im_event_status_open]))
-    "]
-
-    # Allow the user to request a new SLA if there isn't any yet.
-    if {!$sla_requested_p} {
-	ad_returnredirect request-sla
-    }
-}
+set cost_center_options [im_cost_center_options \
+			     -include_empty 1 \
+			     -include_empty_name "" \
+			     -department_only_p 0 \
+			     -cost_type_id "" \
+]
 
 
 ad_form \
@@ -603,28 +670,53 @@ ad_form \
     -action $action_url \
     -mode $form_mode \
     -method GET \
-    -export {start_idx order_by how_many view_name letter } \
     -form {
-    	{mine_p:text(select),optional {label "Mine/All"} {options $mine_p_options }}
+    	{mine_p:text(select),optional {label "$mine_all_l10n"} {options $mine_p_options }}
+	{start_date:text(text) {label "[_ intranet-timesheet2.Start_Date]"} {html {size 10}} {after_html {<input type="button" style="height:20px; width:20px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendar('start_date', 'y-m-d');" >}}}
+
+    	{timescale:text(select),optional {label "$timescale_l10n"} {options $timescale_options }}
+	{report_show_users_p:integer(checkbox),optional {label "$show_users_l10n"} {options {{"" 1}}} }
+	{report_show_locations_p:integer(checkbox),optional {label "$show_locations_l10n"} {options {{"" 1}}} }
+	{report_show_resources_p:integer(checkbox),optional {label "$show_resources_l10n"} {options {{"" 1}}} }
+	{report_show_event_list_p:integer(checkbox),optional {label "$show_event_list_l10n"} {options {{"" 1}}} }
+	{report_show_all_users_p:integer(checkbox),optional {label "$show_all_users_l10n"} {options {{"" 1}}} }
+	{event_name:text(text),optional {label "[_ intranet-core.Name]"} {html {size 12}}}
+	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options} }
+	{event_cost_center_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Cost_Center {Cost Center}]"} {options $cost_center_options} }
+	{event_status_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Status Status]"} {custom {category_type "Intranet Event Status" translate_p 1 package_key "intranet-core"}} }
     }
 
-if {[im_permission $current_user_id "view_events_all"]} {  
+if {$view_events_all_p} {  
     ad_form -extend -name $form_id -form {
-	{event_status_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Status Status]"} {custom {category_type "Intranet Event Status" translate_p 1 package_key "intranet-events"}} }
-	{event_type_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Type Type]"} {custom {category_type "Intranet Event Type" translate_p 1 package_key "intranet-events"} } }
+	{event_type_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Type Type]"} {custom {category_type "Intranet Event Type" translate_p 1 package_key "intranet-core"} } }
+	{event_creator_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Creator Creator]"} {options $event_creator_options}}
     }
-    template::element::set_value $form_id event_status_id [im_opt_val event_status_id]
-    template::element::set_value $form_id event_type_id [im_opt_val event_type_id]
+
+    template::element::set_value $form_id event_status_id $event_status_id
+    template::element::set_value $form_id event_type_id $event_type_id
+
 }
 
 template::element::set_value $form_id mine_p $mine_p
+template::element::set_value $form_id start_date [im_opt_val start_date]
+template::element::set_value $form_id timescale [im_opt_val timescale]
+
+template::element::set_value $form_id event_material_id [im_opt_val event_material_id]
+template::element::set_value $form_id event_cost_center_id [im_opt_val event_cost_center_id]
+
+template::element::set_value $form_id report_show_users_p [im_opt_val report_show_users_p]
+template::element::set_value $form_id report_show_locations_p [im_opt_val report_show_locations_p]
+template::element::set_value $form_id report_show_resources_p [im_opt_val report_show_resources_p]
+template::element::set_value $form_id report_show_event_list_p [im_opt_val report_show_event_list_p]
+template::element::set_value $form_id report_show_all_users_p [im_opt_val report_show_all_users_p]
 
 im_dynfield::append_attributes_to_form \
     -object_type $object_type \
     -form_id $form_id \
     -object_id 0 \
     -advanced_filter_p 1 \
-    -search_p 1
+    -search_p 1 \
+    -page_url "/intranet-events/index"
 
 # Set the form values from the HTTP form variable frame
 set org_mine_p $mine_p
@@ -632,12 +724,17 @@ im_dynfield::set_form_values_from_http -form_id $form_id
 im_dynfield::set_local_form_vars_from_http -form_id $form_id
 set mine_p $org_mine_p
 
+# A customer should not get the "My queue" filter pre-selected - should he get the "My queue" selection at all? 
+if { [im_profile::member_p -profile_id [im_customer_group_id] -user_id $current_user_id] && [string first "mine" [string tolower $mine_p_options]] != -1 } {
+    template::element::set_value $form_id mine_p "mine"
+    set mine_p "mine"
+}
+
 array set extra_sql_array [im_dynfield::search_sql_criteria_from_form \
 			       -form_id $form_id \
 			       -object_type $object_type
 ]
 
-#ToDo: Export the extra DynField variables into form's "export" variable list
 
 
 
@@ -647,11 +744,8 @@ array set extra_sql_array [im_dynfield::search_sql_criteria_from_form \
 
 ns_log Notice "new: Before admin links"
 set admin_html "<ul>"
-
 set user_admin_p [im_is_user_site_wide_or_intranet_admin $current_user_id]
-if {$user_admin_p} {
-    append admin_html "<li><a href=\"/intranet-events/admin/\">[lang::message::lookup "" intranet-events.Admin "Admin"]</a>\n"
-}
+
 
 if {[im_permission $current_user_id "add_events"]} {
     append admin_html "<li><a href=\"/intranet-events/new\">[lang::message::lookup "" intranet-events.Add_a_new_event "New Event"]</a>\n"
@@ -712,7 +806,6 @@ set left_navbar_html "
 	    <hr/>
 "
 
-if {$sla_exists_p} {
     append left_navbar_html "
 	    <div class='filter-block'>
 		<div class='filter-title'>
@@ -722,7 +815,6 @@ if {$sla_exists_p} {
 	    </div>
 	    <hr/>
     "
-}
 
 
 # ---------------------------------------------------------------

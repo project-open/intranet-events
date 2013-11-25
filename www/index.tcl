@@ -93,10 +93,10 @@ set show_resources_l10n [lang::message::lookup "" intranet-events.Show_Resources
 set show_event_list_l10n [lang::message::lookup "" intranet-events.Show_Event_List_P "Show Event List?"]
 set show_all_users_l10n [lang::message::lookup "" intranet-events.Show_All_Users_P "Show All Users?"]
 
-set current_year [db_string current_year "select to_char(now(), 'YYYY')"]
-set next_year [db_string current_year "select to_char(now(), 'YYYY')::integer + 1"]
-set previous_year [db_string current_year "select to_char(now(), 'YYYY')::integer - 1"]
-
+set current_year [string range $start_date 0 3]
+set next_year [expr $current_year + 1]
+set over_next_year [expr $current_year + 2]
+set previous_year [expr $current_year - 1]
 
 # ---------------------------------------------------------------
 # Date Scale
@@ -104,24 +104,24 @@ set previous_year [db_string current_year "select to_char(now(), 'YYYY')::intege
 
 switch $timescale {
     "until_end_of_year" {
-        set report_start_date $today
-        set report_end_date "$current_year-12-31"
+        set report_start_date $start_date
+        set report_end_date "$next_year-01-01"
     }
     "since_start_of_year" {
         set report_start_date "$current_year-01-01"
-        set report_end_date $today
+        set report_end_date $start_date
     }
     "current_year" {
         set report_start_date "$current_year-01-01"
-        set report_end_date "$current_year-12-31"
+        set report_end_date "$next_year-01-01"
     }
     "next_year" {
         set report_start_date "$next_year-01-01"
-        set report_end_date "$next_year-12-31"
+        set report_end_date "$over_next_year-01-01"
     }
     "previous_year" {
         set report_start_date "$previous_year-01-01"
-        set report_end_date "$previous_year-12-31"
+        set report_end_date "$current_year-01-01"
     }
     "next_3w" {
         set report_start_date $start_date
@@ -141,10 +141,10 @@ switch $timescale {
     }
     "next_3m" {
         set report_start_date $start_date
-        set report_end_date [im_date_julian_to_ansi [expr $start_date_julian + 93]]
+        set report_end_date [im_date_julian_to_ansi [expr $start_date_julian + 90]]
     }
     "last_3m" {
-        set report_start_date [im_date_julian_to_ansi [expr $start_date_julian - 93]]
+        set report_start_date [im_date_julian_to_ansi [expr $start_date_julian - 90]]
         set report_end_date $start_date
     }
     default {

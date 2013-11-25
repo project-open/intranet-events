@@ -529,6 +529,7 @@ ad_proc im_event_cube {
     
     # Initialize the hash for holidays.
     set bank_holiday_color [util_memoize [list db_string holiday_color "select aux_string2 from im_categories where category_id = [im_absence_type_bank_holiday]"]]
+    set days_of_week_pretty [lang::message::lookup "" acs-lang.localization-abday]
     array set holiday_hash {}
     set day_list [list]
     for {set i 0} {$i < $report_days} {incr i} {
@@ -540,12 +541,14 @@ ad_proc im_event_cube {
 		to_char(:report_start_date::date + :i::integer, 'Mon') as date_month,
 		to_char(:report_start_date::date + :i::integer, 'YYYY') as date_year,
 		to_char(:report_start_date::date + :i::integer, 'Dy') as date_weekday,
+		extract(dow FROM :report_start_date::date + :i::integer) AS date_day_of_week,
 		extract(week FROM :report_start_date::date + :i::integer) AS date_week
         "
 
+	set date_day_of_week_pretty [lindex $days_of_week_pretty $date_day_of_week]
 	if {$date_weekday == "Sat" || $date_weekday == "Sun"} { set holiday_hash($date_date) $bank_holiday_color }
 	set date_month_l10n [lang::message::lookup "" intranet-events.Month_$date_month $date_month]
-	lappend day_list [list $date_date $date_day_of_month $date_month_l10n $date_year $date_weekday $date_week]
+	lappend day_list [list $date_date $date_day_of_month $date_month_l10n $date_year $date_day_of_week_pretty $date_week]
     }
 
     # ---------------------------------------------------------------
@@ -1214,6 +1217,8 @@ ad_proc im_event_cube {
 	set date_day_of_month [lindex $day 1]
 	set date_month_of_year [lindex $day 2]
 	set date_year [lindex $day 3]
+	set date_weekday [lindex $day 4]
+	set date_week [lindex $day 5]
 	# append table_header "<td class=rowtitle>$date_month_of_year<br>$date_day_of_month</td>\n"
 	append table_header "<td class=rowtitle align=center><div style=\"width: ${cell_width}px\">$date_weekday $date_day_of_month $date_month_of_year</div></td>\n"
     }
@@ -1328,6 +1333,8 @@ ad_proc im_event_cube {
 	set date_day_of_month [lindex $day 1]
 	set date_month_of_year [lindex $day 2]
 	set date_year [lindex $day 3]
+	set date_weekday [lindex $day 4]
+	set date_week [lindex $day 5]
 	# append table_header "<td class=rowtitle>$date_month_of_year<br>$date_day_of_month</td>\n"
 	append table_header "<td class=rowtitle align=center><div style=\"width: ${cell_width}px\">$date_weekday $date_day_of_month $date_month_of_year</div></td>\n"
     }
@@ -1519,12 +1526,19 @@ ad_proc im_event_cube_render_event {
 [join $customers "\n"]
 "
 
-    set bordercolor "yellow"
-    if {$conflict_p} { set bordercolor "red" }
+    if {$conflict_p} { 
+ 	set bordercolor "red" 
+        set border_width 2
+        set top_distance -16
+    } else {
+        set bordercolor "yellow"
+        set border_width 0
+        set top_distance -13
+    }
     set result "
       <div style='position: relative'>
-<div style='position: absolute; top: -16; left: -4; width: $event_width; z-index:10; background: yellow; opacity: 0.8;'>
-<table cellspacing=0 cellpadding=0 border=2 bgcolor=#$bgcolor bordercolor=$bordercolor width='100%'>
+<div style='position: absolute; top: $top_distance; left: -4; width: $event_width; z-index:10; background: yellow; opacity: 0.8;'>
+<table cellspacing=0 cellpadding=0 border=$border_width bgcolor=#$bgcolor bordercolor=$bordercolor width='100%'>
 <tr>
 <td bgcolor=#$bgcolor>
 <nobr><a href=$event_url title='$event_title' target='_blank'>$kuerzel</a>&nbsp;</nobr>
