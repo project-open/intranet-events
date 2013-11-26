@@ -36,18 +36,56 @@ namespace eval im_event {
 
     ad_proc -public task_sweeper {
 	{-sweep_mode "full"}
-	{-sweep_last_interval "60 minutes" }
 	{-event_id ""}
 	{-debug_p 1}
     } {
-        Periodic sweeper that checks that every event 
-	is represented by a timesheet task with the same members,
-	so that event trainers can log their hours.
+        Periodic sweeper that executes task_sweeper_helper.
+        @author frank.bergmann@project-open.com
+    } {
+	ns_log Notice "im_event::task_sweeper: Starting"
+	# Make sure that only one thread is sweeping at a time
+	if {[nsv_incr intranet_events sweeper_p] > 1} {
+	    nsv_incr intranet_events sweeper_p -1
+	    ns_log Notice "im_event::task_sweeper: Aborting - there is another process running"
+	    return "busy"
+	}
+
+	# Call the actual sweeper
+	set debug_html ""
+	if {[catch {
+	    set debug_html [task_sweeper_helper \
+		-sweep_mode $sweep_mode \
+		-event_id $event_id \
+		-debug_p $debug_p \
+	    ]
+	} err_msg]} {
+	    append debug_html "error:\n$err_msg"
+	}
+
+	# Debugging - wait for 5 seconds
+	# exec sleep 5
+
+	# Free the semaphore for next use
+	nsv_incr intranet_events sweeper_p -1
+	ns_log Notice "im_event::task_sweeper: Finished"
+	return $debug_html
+    }
+
+    ad_proc -public task_sweeper_helper {
+	{-sweep_mode ""}
+	{-event_id ""}
+	{-debug_p 1}
+    } {
+        Sweeper "helper" doing the actual work. 
+	Checks that every event is represented by a timesheet task 
+	with the same members, so that event trainers can log their 
+	hours.
 
 	@param full_sweep_p Normally sweeps only affect events
 	       without task or recently modified events.
         @author frank.bergmann@project-open.com
     } {
+	ns_log Notice "im_event::task_sweeper_helper: sweep_mode=$sweep_mode, event_id=$event_id, debug_p=$$debug_p"
 	set debug ""
 
 	# -------------------------------------------------
@@ -55,8 +93,8 @@ namespace eval im_event {
 
 	# Default: Sweep only recently modified events or 
 	# completely dirty ones (no timesheet task entry)
-	set sweep_sql "
-		select	e.*
+	set sweep_select_sql "
+		select	e.event_id
 		from	im_events e,
 			acs_objects o
 		where	e.event_id = o.object_id and
@@ -66,22 +104,37 @@ namespace eval im_event {
 				event_timesheet_last_swept is null
 			OR	-- modified since last sweep
 				o.last_modified > event_timesheet_last_swept
+			OR	-- members have changed
+				e.event_member_list_cached != im_biz_object_member__list(e.event_id)
 			)
 	"
 	# Full sweep - sweep all events, which may take minutes...
 	if {"full" == $sweep_mode} {
-	    set sweep_sql "select e.* from im_events e"
+	    set sweep_select_sql "select e.event_id from im_events e"
 	}
 
 	# Sweep only a specific event
 	if {"" != $event_id && [string is integer $event_id]} { 
-	    set sweep_sql "select e.* from im_events e where e.event_id = $event_id" 
+	    set sweep_select_sql "select e.event_id from im_events e where e.event_id = $event_id" 
 	}
 
+
+	set sweep_sql "
+		select	e.*,
+			im_biz_object_member__list(e.event_id) as event_member_list
+		from	im_events e
+		where	e.event_id in ($sweep_select_sql)
+        "
 	# -------------------------------------------------
         # Check the situation of relevant events
 	db_foreach sweep_events $sweep_sql {
-	    lappend debug "task_sweeper: Sweeping event# $event_id"
+	    lappend debug "task_sweeper_helper: Sweeping event# $event_id"
+
+	    # Do we need to re-index the event in order to keep the 
+	    # TSearch2 index up to date?
+	    if {$event_member_list_cached != $event_member_list} {
+		db_dml update-reindex-tsearch "update im_events set event_member_list_cached = :event_member_list where event_id = :event_id"
+	    }
 
 	    # The year for the event - depends on it's start date
 	    set year [string range $event_start_date 0 3]
@@ -93,7 +146,7 @@ namespace eval im_event {
 		where	project_nr = :year || '_events'
 	    " -default ""]
 	    if {"" == $parent_project_id} {
-		lappend debug "task_sweeper: Did not find project '${year}_events' - creating a new one"
+		lappend debug "task_sweeper_helper: Did not find project '${year}_events' - creating a new one"
 		set parent_project_id [project::new \
 					   -project_name       "$year Events" \
 					   -project_nr         "${year}_events" \
@@ -110,7 +163,7 @@ namespace eval im_event {
 			where project_id = :parent_project_id
 		"
 	    }
-	    lappend debug "task_sweeper: Event parent project# $parent_project_id"
+	    lappend debug "task_sweeper_helper: Event parent project# $parent_project_id"
 
 
 	    # -----------------------------------------------------
@@ -120,6 +173,7 @@ namespace eval im_event {
 
 	    set project_id $parent_project_id
 	    set material_id $event_material_id
+	    if {"" == $material_id} { set material_id [im_material_default_material_id] }
 	    set cost_center_id $event_cost_center_id
 	    set uom_id [im_uom_hour]
 	    set task_type_id [im_project_type_task]
@@ -165,13 +219,13 @@ namespace eval im_event {
 				p.parent_id = :parent_project_id and
 				p.project_nr = :task_nr
 	        " -default ""]
-		lappend debug "task_sweeper: Found task #$event_timesheet_task_id for task_nr='$task_nr'"
+		lappend debug "task_sweeper_helper: Found task #$event_timesheet_task_id for task_nr='$task_nr'"
 	    }
 
 	    if {"" == $event_timesheet_task_id} {
-		lappend debug "task_sweeper: About to create a new task"
+		lappend debug "task_sweeper_helper: About to create a new task"
 		set event_timesheet_task_id [db_string task_insert {}]
-		lappend debug "task_sweeper: Newly created task #$event_timesheet_task_id"
+		lappend debug "task_sweeper_helper: Newly created task #$event_timesheet_task_id"
 	    }
 	    db_dml task_update {}
 	    db_dml project_update {}
@@ -230,7 +284,7 @@ namespace eval im_event {
 	    "
 
 	    # Write Audit Trail
-	    im_project_audit -project_id $event_timesheet_task_id -action after_create
+	    im_project_audit -user_id 0 -project_id $event_timesheet_task_id -action after_create
 	}
 	return [join $debug "\n"]
     }
