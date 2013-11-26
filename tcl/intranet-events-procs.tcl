@@ -407,25 +407,90 @@ ad_proc im_event_resource_component { event_id form_mode plugin_id view_name ord
 ad_proc -public im_event_permissions {user_id event_id view_var read_var write_var admin_var} {
     Fill the "by-reference" variables read, write and admin
     with the permissions of $user_id on $event_id
-    ToDo: Implement
 } {
     upvar $view_var view
     upvar $read_var read
     upvar $write_var write
     upvar $admin_var admin
     
-    set view 1
-    set read 1
-    set write 1
-    set admin 1
+    set view 0
+    set read 0
+    set write 0
+    set admin 0
     
-    # No read - no write...
-    if {!$read} {
-        set write 0
-        set admin 0
-    }
-}
+    set admin_p [im_is_user_site_wide_or_intranet_admin $user_id]
+    set add_events_p [im_permission $user_id "add_events"]
+    set view_events_all_p [im_permission $user_id "view_events_all"]
+    set edit_events_all_p [im_permission $user_id "edit_events_all"]
 
+    # Determine the list of all groups in which the current user is a member
+    set user_parties [im_profile::profiles_for_user -user_id $user_id]
+    lappend user_parties $user_id
+
+    if {![db_0or1row event_info "
+	select	coalesce(o.creation_user,0) as creation_user_id,
+		(select count(*) from (
+			-- member of the event - any role_id will do.
+			select	distinct r.object_id_one
+			from	acs_rels r,
+				im_biz_object_members bom
+			where	r.rel_id = bom.rel_id and
+				r.object_id_two in ([join $user_parties ","])
+		) t) as event_member_p,
+		(select count(*) from (
+			-- admin of the event
+			select	distinct r.object_id_one
+			from	acs_rels r,
+				im_biz_object_members bom
+			where	r.rel_id = bom.rel_id and
+				r.object_id_two in ([join $user_parties ","]) and
+				bom.object_role_id in (1301, 1302)
+		) t) as event_admin_p,
+		(select count(*) from (
+			-- cases with user as task_assignee
+			select distinct wfc.object_id
+			from	wf_task_assignments wfta,
+				wf_tasks wft,
+				wf_cases wfc
+			where	e.event_id = wfc.object_id and
+				wft.state in ('enabled', 'started') and
+				wft.case_id = wfc.case_id and
+				wfta.task_id = wft.task_id and
+				wfta.party_id in (
+					select	group_id
+					from	group_distinct_member_map
+					where	member_id = :user_id
+				    UNION
+					select	:user_id
+				)
+		) t) as case_assignee_p,
+		(select count(*) from (
+			-- cases with user as task holding_user
+			select	distinct wfc.object_id
+			from	wf_tasks wft,
+				wf_cases wfc
+			where	e.event_id = wfc.object_id and
+				wft.holding_user = :user_id and
+				wft.state in ('enabled', 'started') and
+				wft.case_id = wfc.case_id
+		) t) as holding_user_p
+	from	im_events e,
+		acs_objects o
+	where	e.event_id = :event_id and
+		e.event_id = o.object_id
+    "]} {
+	# Didn't find event - just return with permissions set to 0...
+	return 0
+    }
+
+    set owner_p [expr $user_id == $creation_user_id]
+
+    set read [expr $admin_p || $owner_p || $event_member_p || $holding_user_p || $case_assignee_p || $view_events_all_p]
+    set write [expr $admin_p || $owner_p || $event_admin_p || $holding_user_p || $case_assignee_p || $edit_events_all_p]
+
+    set view $read
+    set admin $write
+}
 
 
 # ----------------------------------------------------------------------
