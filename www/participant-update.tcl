@@ -14,6 +14,7 @@ ad_page_contract {
     return_url
     { participant_status_id:array,integer,optional }
     { bom_note:array,optional }
+    { order_item_id:array,integer,optional }
 }
 
 # ---------------------------------------------------------------
@@ -31,9 +32,14 @@ foreach participant_id [array names participant_status_id] {
     set status_id $participant_status_id($participant_id)
     set note ""
     catch { set note $bom_note($participant_id) }
+
+    set item_id ""
+    set item_id $order_item_id($participant_id)
+
     db_dml update_order_amount "
 		update im_biz_object_members set 
 			member_status_id = :status_id,
+			order_item_id = :item_id,
 			note = :note
 		where rel_id in (
 			   	select	rel_id

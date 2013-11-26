@@ -104,6 +104,10 @@ constraint im_biz_object_members_status_fk references im_categories;
 alter table im_biz_object_members 
 add column note text;
 
+alter table im_biz_object_members 
+add column order_item_id integer
+constraint im_biz_object_members_order_item_fk references im_invoice_items;
+
 
 
 ------------------------------------------------------
@@ -154,6 +158,8 @@ create table im_events (
 					constraint im_events_ts_task_fk
 					references im_timesheet_tasks,
 	event_timesheet_last_swept	timestamptz,
+	-- Last list of members
+	event_member_list_cached	text,
 
 	event_description		text
 );
@@ -163,6 +169,8 @@ create table im_events (
 alter table im_events 
 add constraint im_events_name_type_un unique (event_name, event_type_id);
 
+alter table im_events
+add column event_member_list_cached text;
 
 
 -- Incices to speed up frequent queries

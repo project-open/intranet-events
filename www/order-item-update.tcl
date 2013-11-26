@@ -12,7 +12,7 @@ ad_page_contract {
 } {
     event_id:integer
     return_url
-    { order_item_units:array,integer,optional }
+    { order_item_units:array,float,optional }
 }
 
 # ---------------------------------------------------------------

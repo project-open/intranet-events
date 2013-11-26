@@ -3,7 +3,7 @@
    <rdbms><type>postgresql</type><version>7.1</version></rdbms>
 
 
-<fullquery name="im_event::task_sweeper.task_insert">
+<fullquery name="im_event::task_sweeper_helper.task_insert">
     <querytext>
 	SELECT im_timesheet_task__new (
 		NULL,			-- p_task_id
@@ -38,7 +38,7 @@
 </fullquery>
 
 
-<fullquery name="im_event::task_sweeper.task_update">
+<fullquery name="im_event::task_sweeper_helper.task_update">
     <querytext>
 	update im_timesheet_tasks set
 		material_id		= :material_id,
@@ -52,7 +52,7 @@
 </fullquery>
 
 
-<fullquery name="im_event::task_sweeper.project_update">
+<fullquery name="im_event::task_sweeper_helper.project_update">
     <querytext>
 	update im_projects set
 		project_name		= :task_name,

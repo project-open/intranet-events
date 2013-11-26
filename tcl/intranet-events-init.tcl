@@ -9,8 +9,7 @@ ad_library {
 
 # Initialize the search "semaphore" to 0.
 # There should be only one thread indexing files at a time...
-nsv_set im_event_task_sweeper sweeper_p 0
+nsv_set intranet_events sweeper_p 0
 
 # Check for changed events every X minutes
-ad_schedule_proc -thread t [parameter::get_from_package_key -package_key intranet-events -parameter EventTaskSweeperInterval -default 60] im_event::task_sweeper
-
+ad_schedule_proc -thread t [parameter::get_from_package_key -package_key intranet-events -parameter EventTaskSweeperInterval -default 60] im_event::task_sweeper 

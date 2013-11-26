@@ -65,6 +65,56 @@ set customer_options [db_list_of_lists customer_options "
 	order by company_name
 "]
 
+set order_item_options [db_list_of_lists order_items "
+select
+	cost_name || ' / ' || sort_order ||
+	-- ' - ' || item_name || 
+	' (' || round(coalesce(item_units,0)) || ' | ' || 
+	round(coalesce(rueckerfasst_units,0)) || ' | ' || 
+	round(coalesce(other_events_units,0)) || ')',
+	item_id
+from
+	(select	*,
+		ii.sort_order as item_sort_order,
+                (       select  sum(item_units)
+                        from    im_costs rc,
+				im_invoice_items rii
+                        where   rc.cost_id = rii.invoice_id and
+				rc.cost_type_id = 3791 and
+				rii.nav_order_item_id = ii.item_id
+		) as rueckerfasst_units,
+		(	-- sum up the assignments of the order item in all other events
+			select	sum(oeoir.order_item_amount)
+			from	im_events oe,
+				im_event_order_item_rels oeoir
+			where	oeoir.order_item_id = ii.item_id and
+				oeoir.event_id = oe.event_id and
+				oe.event_id != :event_id
+		) as other_events_units
+	from	im_events e,
+		acs_rels ecr,
+		im_event_customer_rels iecr,
+		im_companies cust,
+		im_costs c,
+		im_invoice_items ii
+	where	e.event_id = :event_id and
+		ecr.rel_id = iecr.rel_id and
+		ecr.object_id_one = e.event_id and
+		ecr.object_id_two = cust.company_id and
+		c.customer_id = cust.company_id and
+		ii.invoice_id = c.cost_id and
+		c.cost_type_id = 3703
+	) t
+where	
+	coalesce(rueckerfasst_units,0) < item_units
+order by
+	company_name,
+	cost_name,
+	sort_order,
+	item_name
+"]
+
+
 # ******************************************************
 # Create the list of all attributes of the current type
 # ******************************************************
@@ -75,6 +125,7 @@ set email_l10n [lang::message::lookup "" intranet-core.Email Email]
 set company_l10n [lang::message::lookup "" intranet-core.Company Company]
 set comment_l10n [lang::message::lookup "" intranet-core.Comment Comment]
 set status_l10n [lang::message::lookup "" intranet-core.Status Status]
+set order_item_l10n [lang::message::lookup "" intranet-core.Order_Item "Order Item"]
 
 list::create \
     -name participant_list \
@@ -108,6 +159,14 @@ list::create \
 		</select>
 	    }
 	}
+	order_item_id {
+	    label "$order_item_l10n" 
+	    display_template {
+		<select name=order_item_id.@participant_list_multirow.participant_id@>
+		@participant_list_multirow.order_item_options_html;noquote@
+		</select>
+	    }
+	}
 	bom_note { 
 	    label "$comment_l10n" 
 	    display_template {
@@ -133,11 +192,12 @@ list::create \
     }
 
 
-db_multirow -extend {participant_url company_name company_url delete_url reserved_enabled confirmed_enabled note_quoted} participant_list_multirow get_participants "
+db_multirow -extend {participant_url company_name company_url delete_url reserved_enabled confirmed_enabled order_item_options_html note_quoted} participant_list_multirow get_participants "
 	select	*,
 		u.user_id as participant_id,
 		im_category_from_id(bom.member_status_id) as participant_status,
 		bom.note as bom_note,
+		bom.order_item_id as bom_order_item_id,
 		(select min(company_id) from im_companies, acs_rels where object_id_one = company_id and object_id_two = u.user_id) as company_id
 	from	persons pe,
 		parties pa,
@@ -166,4 +226,15 @@ db_multirow -extend {participant_url company_name company_url delete_url reserve
     if {[im_event_participant_status_confirmed] == $member_status_id} { set confirmed_enabled "selected" }
 
     set note_quoted [string map {"'" ""} $bom_note]
+
+    # Order Item Options - selected depending on order_item_id
+    set order_item_options_html "<option value=''></option>\n"
+    foreach order_item_tuple $order_item_options {
+	set order_item_name [lindex $order_item_tuple 0]
+	set order_item_id [lindex $order_item_tuple 1]
+	
+	set selected ""
+	if {$order_item_id == $bom_order_item_id} { set selected "selected" }
+	append order_item_options_html "<option value=$order_item_id $selected>$order_item_name</option>\n"
+    }
 }

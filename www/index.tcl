@@ -962,4 +962,3 @@ append left_navbar_html "
 	    </div>
 	    <hr/>
 "
-

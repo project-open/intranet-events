@@ -125,6 +125,7 @@ if {[info exists event_id]} {
     }
 }
 
+set user_admin_p $write_p
 
 # ----------------------------------------------
 # Page Title
@@ -424,9 +425,6 @@ ad_form -extend -name event -on_request {
 	im_workflow_skip_first_transition -case_id $case_id
     }
 
-    # Generate im_timesheet_task entries for each event
-    im_event::task_sweeper -event_id $event_id
-
     # Write Audit Trail
     im_project_audit -project_id $event_id -action after_create
 
@@ -452,9 +450,6 @@ ad_form -extend -name event -on_request {
 	-object_type "im_event" \
 	-object_id $event_id \
 	-form_id event
-
-    # Generate im_timesheet_task entries for each event
-    im_event::task_sweeper -event_id $event_id
 
     # Write Audit Trail
     im_project_audit -project_id $event_id -action after_update
@@ -497,6 +492,13 @@ ad_form -extend -name event -on_request {
 	"[lang::message::lookup {} intranet-events.Event_nr_already_exists {Event Nr already exists}]" 
     }
 }
+
+
+# Generate im_timesheet_task entries for each event
+if {[info exists event_id]} {
+    im_event::task_sweeper -event_id $event_id
+}
+
 
 
 # ---------------------------------------------------------------
@@ -744,8 +746,6 @@ array set extra_sql_array [im_dynfield::search_sql_criteria_from_form \
 
 ns_log Notice "new: Before admin links"
 set admin_html "<ul>"
-set user_admin_p [im_is_user_site_wide_or_intranet_admin $current_user_id]
-
 
 if {[im_permission $current_user_id "add_events"]} {
     append admin_html "<li><a href=\"/intranet-events/new\">[lang::message::lookup "" intranet-events.Add_a_new_event "New Event"]</a>\n"
