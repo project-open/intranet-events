@@ -168,8 +168,8 @@ namespace eval im_event {
 
 	    # -----------------------------------------------------
 	    # Set all important task fields
-	    set task_nr "event_$event_nr"
-	    set task_name "$event_name ($event_nr)"
+	    set task_nr "$event_nr"
+	    set task_name "$event_name"
 
 	    set project_id $parent_project_id
 	    set material_id $event_material_id
@@ -787,7 +787,7 @@ ad_proc im_event_cube {
 		im_biz_object_member__list(e.event_id) as event_members,
 		CASE WHEN e.event_start_date < :report_start_date THEN 1 ELSE 0 END as event_starts_before_report_p,
 		im_material_nr_from_id(e.event_material_id) as event_material_nr,
-		im_cost_center_code_from_id(e.event_cost_center_id) as event_cost_center_code,
+		cc.cost_center_label as event_cost_center_code,
 		(select count(*) from acs_rels qr, im_biz_object_members qbom 
 		 where qr.rel_id = qbom.rel_id and qbom.member_status_id = 82200 and
 		 qr.object_id_one = e.event_id and
@@ -800,6 +800,7 @@ ad_proc im_event_cube {
 		) as event_reserved_seats
 	from	acs_objects o,
 		im_events e
+		LEFT OUTER JOIN im_cost_centers cc ON (e.event_cost_center_id = cc.cost_center_id)
 		LEFT OUTER JOIN acs_rels r ON (r.object_id_one = e.event_id)
 		LEFT OUTER JOIN users u ON (r.object_id_two = u.user_id)
 	where	o.object_id = e.event_id and
@@ -1576,10 +1577,10 @@ ad_proc im_event_cube_render_event {
 
 	switch $otype {
 	    user - person {
-		switch $role_id {
-		    1300 { lappend customers "$customer - $user_name" }
-		    1307 - 1308 { lappend consultants $user_name }
-		    default { ad_return_complaint 1 "im_event_cube_render_event: unknown role: $role_id" }
+		if {[im_profile::member_p -profile_id [im_profile_employees] -user_id $user_id]} {
+		    lappend consultants $user_name
+		} else {
+		    lappend customers "$customer - $user_name"
 		}
 	    }
 	    im_conf_item {
