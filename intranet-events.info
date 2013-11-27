@@ -10,14 +10,14 @@
     <inherit-templates-p>f</inherit-templates-p>
     <auto-mount>intranet-events</auto-mount>
 
-    <version name="0.1d" url="http://openacs.org/repository/download/apm/intranet-events-0.1d.apm">
+    <version name="4.0.5.0.0" url="http://openacs.org/repository/download/apm/intranet-events-4.0.5.0.0.apm">
         <owner url="mailto:frank.bergmann@project-open.com">Frank Bergmann</owner>
         <summary>Events for training and other purposes</summary>
         <vendor url="http://www.project-open.com/">]project-open[</vendor>
         <description format="text/plain">Events for training and other purposes</description>
         <maturity>0</maturity>
 
-        <provides url="intranet-events" version="0.1d"/>
+        <provides url="intranet-events" version="4.0.5.0.0"/>
 
         <callbacks>
         </callbacks>
