@@ -479,7 +479,16 @@ ad_proc -public im_event_permissions {user_id event_id view_var read_var write_v
 	where	e.event_id = :event_id and
 		e.event_id = o.object_id
     "]} {
-	# Didn't find event - just return with permissions set to 0...
+	# Didn't find event 
+	if {$add_events_p} {
+	    # The user has the right to create new events, so return 1 for all perms
+	    set view 1
+	    set read 1
+	    set write 1
+	    set admin 1
+	}
+
+	# Just return with permissions set to 0...
 	return 0
     }
 
@@ -490,6 +499,8 @@ ad_proc -public im_event_permissions {user_id event_id view_var read_var write_v
 
     set view $read
     set admin $write
+
+#     ad_return_complaint 1 "read = $read = expr $admin_p || $owner_p || $event_member_p || $holding_user_p || $case_assignee_p || $view_events_all_p<br>write = $write = expr $admin_p || $owner_p || $event_admin_p || $holding_user_p || $case_assignee_p || $edit_events_all_p"
 }
 
 
