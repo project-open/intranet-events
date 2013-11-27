@@ -123,6 +123,12 @@ if {[info exists event_id]} {
         ad_return_complaint 1 "<li>You don't have the permissions to see this event."
         ad_script_abort
     }
+} else {
+    # Default permissions for 
+    set view_p [im_permission $current_user_id "add_events"]
+    set read_p $view_p
+    set write_p $view_p
+    set admin_p $view_p
 }
 
 set user_admin_p $write_p
