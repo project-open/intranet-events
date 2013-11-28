@@ -32,8 +32,8 @@ db_1row event_info "
 	where	e.event_id = :event_id
 "
 
-set event_start_hour_minute_second [parameter::get_from_package_key -package_key "intranet-events" -parameter "EventStartHour" -default "08:00:00"]
-set event_end_hour_minute_second [parameter::get_from_package_key -package_key "intranet-events" -parameter "EventStartHour" -default "17:00:00"]
+set event_start_hour_minute_second [parameter::get_from_package_key -package_key "intranet-events" -parameter "EventDefaultStartHour" -default "08:00:00"]
+set event_end_hour_minute_second [parameter::get_from_package_key -package_key "intranet-events" -parameter "EventDefaultEndHour" -default "17:00:00"]
 
 set event_start_date_pretty "$event_start_date_date $event_start_hour_minute_second"
 set event_end_date_pretty "$event_end_date_date $event_end_hour_minute_second"
