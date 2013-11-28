@@ -1715,16 +1715,23 @@ ad_proc im_event_color_for_assignation {
 	return "FF0000" 
     }
     if {$percentage < 0} { set percentage 0.0 }
-    if {$percentage > 100} { set percentage 100.0 }
-
-    # Increase percentage by a base 25%
-    set percentage [expr 0.8 * ($percentage + 25.0)]
-
+    if {$percentage > 100} { 
+	#mharms: return orange when percentage > 100
+	return "FF896C"
+    }
+        
     set hex_list {0 1 2 3 4 5 6 7 8 9 A B C D E F}
-    set r [expr int(255.0 * $percentage / 100.0)]
-    set g $r
+    
+    #mharms: base color (represents 1%)
+    set r 245
+    set g 245          
     set b 255
-
+    
+    #mharms: changed calculation
+    set r [expr  $r - int($r * ($percentage / 100.0))]
+    set g [expr  $g - int($g * ($percentage / 100.0))]
+    set b 255
+    
     set color ""
     append color [lindex $hex_list [expr $r / 16]]
     append color [lindex $hex_list [expr $r % 16]]
@@ -1732,9 +1739,10 @@ ad_proc im_event_color_for_assignation {
     append color [lindex $hex_list [expr $g % 16]]
     append color [lindex $hex_list [expr $b / 16]]
     append color [lindex $hex_list [expr $b % 16]]
-
+    
     return $color
 }
+
 
 
 
