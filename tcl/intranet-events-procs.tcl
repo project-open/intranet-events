@@ -1178,7 +1178,7 @@ ad_proc im_event_cube {
 
 	if {0 == $ctr} { set cell_week $date_week }
 	if {$date_week != $cell_week} {
-	    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+	    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "%date_year% KW %cell_week%"]</td>\n"
 	    set cell_span 1
 	    set cell_week $date_week
 	} else {
@@ -1186,7 +1186,7 @@ ad_proc im_event_cube {
 	}
 	incr ctr
     }
-    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "%date_year% KW %cell_week%"]</td>\n"
     append table_header "<td class=rowtitle>$arrow_right &nbsp;&nbsp; $arrow_right_double</td>\n"
     append table_header "</tr>\n"
     append table_html $table_header
@@ -1326,7 +1326,7 @@ ad_proc im_event_cube {
 
 	if {0 == $ctr} { set cell_week $date_week }
 	if {$date_week != $cell_week} {
-	    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+	    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "%date_year% KW %cell_week%"]</td>\n"
 	    set cell_span 1
 	    set cell_week $date_week
 	} else {
@@ -1334,7 +1334,7 @@ ad_proc im_event_cube {
 	}
 	incr ctr
     }
-    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "%date_year% KW %cell_week%"]</td>\n"
     append table_header "<td class=rowtitle>$arrow_right &nbsp;&nbsp; $arrow_right_double</td>\n"
     append table_header "</tr>\n"
     append table_html $table_header
@@ -1443,7 +1443,7 @@ ad_proc im_event_cube {
 
 	if {0 == $ctr} { set cell_week $date_week }
 	if {$date_week != $cell_week} {
-	    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+	    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "%date_year% KW %cell_week%"]</td>\n"
 	    set cell_span 1
 	    set cell_week $date_week
 	} else {
@@ -1451,7 +1451,7 @@ ad_proc im_event_cube {
 	}
 	incr ctr
     }
-    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "KW %cell_week%"]</td>\n"
+    append table_header "<td class=rowtitle colspan=$cell_span align=center>[lang::message::lookup "" intranet-events.KW_week "%date_year% KW %cell_week%"]</td>\n"
     append table_header "<td class=rowtitle>$arrow_right &nbsp;&nbsp; $arrow_right_double</td>\n"
     append table_header "</tr>\n"
     append table_html $table_header
