@@ -23,6 +23,8 @@
         </callbacks>
         <parameters>
             <parameter scope="instance" datatype="number"  min_n_values="1"  max_n_values="1"  name="EventCubeCellWidth"  default="50" description="EventCubeCellWidth"/>
+            <parameter scope="instance" datatype="string"  min_n_values="1"  max_n_values="1"  name="EventDefaultStartHour"  default="08:00:00" description="Default HH24:MI:SS (hour::minute::second) time for the start of events in the morning for iCal dates. Default is '08:00:00' which corresponds to 9:00 am CET."/>
+            <parameter scope="instance" datatype="string"  min_n_values="1"  max_n_values="1"  name="EventDefaultEndHour"  default="08:00:00" description="Default HH24:MI:SS (hour::minute::second) time for the end of events in the evening for iCal dates. Default is '17:00:00' which corresponds to 6:00 pm CET."/>
         </parameters>
 
     </version>
