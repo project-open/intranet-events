@@ -80,6 +80,7 @@ if {![info exists task]} {
     ad_returnredirect [export_vars -base "/intranet-events/new" { {event_id $task(object_id)} {form_mode display}} ]
 }
 
+
 # ------------------------------------------------------------------
 # Default & Security
 # ------------------------------------------------------------------
@@ -597,6 +598,16 @@ set form_mode "edit"
 
 set today [db_string today "select now()::date from dual"]
 set start_date $today
+
+
+# Defaults for filters
+set report_show_users_p 1
+set report_show_locations_p 1
+set report_show_resources_p 1
+set report_show_event_list_p 0
+set report_show_all_users_p 0
+
+
 
 
 set mine_p_options {}
