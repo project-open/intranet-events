@@ -33,6 +33,19 @@ end;' language 'plpgsql';
 
 
 
+create or replace view im_absence_types as
+select
+        category_id as absence_type_id,
+        category as absence_type
+from
+        im_categories
+where
+        category_type = 'Intranet Absence Type' and
+        (enabled_p = 't' OR enabled_p is NULL);
+;
+
+
+
 -----------------------------------------------------------
 -- Create the object type
 
