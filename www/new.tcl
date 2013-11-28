@@ -800,8 +800,14 @@ if {[info exists event_id] && "" != $event_id && 0 != $event_id} {
     set event_timesheet_task_id [db_string ts_task_id "select event_timesheet_task_id from im_events where event_id = :event_id" -default ""]
     if {"" != $event_timesheet_task_id} {
 	set ts_url [export_vars -base "/intranet-timesheet2-tasks/new" {{task_id $event_timesheet_task_id}}]
-	set event_timesheet_task_html "<a href='$ts_url'>[lang::message::lookup "" intranet-events.See_related_timesheet_task "See related Gantt task"]</a>"
+	set event_timesheet_task_html "<li><a href='$ts_url'>[lang::message::lookup "" intranet-events.See_related_timesheet_task "See related Gantt task"]</a></li>\n"
     }
+
+    append event_timesheet_task_html "<li><a href='[export_vars -base "/intranet-events/ical.ics" {event_id}]'>ical.ics</a></li>\n"
+}
+
+if {"" != $event_timesheet_task_html} {
+    set event_timesheet_task_html "<ul>$event_timesheet_task_html</ul>\n"
 }
 
 
