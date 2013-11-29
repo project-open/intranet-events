@@ -867,34 +867,6 @@ where	c.cost_id = ii.invoice_id and
 where widget_name = 'solidline_task_order_item';
 
 
-update im_dynfield_widgets 
-set parameters = '
-{custom {sql "
-select	ii.item_id,
-	c.nav_order_nr || ''/'' || coalesce(ii.sort_order::text,'''') || '' - '' ||
-		m.material_nr || '' - '' || m.material_name || 
-		'' ('' || round(ii.item_units) || '';'' || round(ii.item_units * coalesce(m.nav_planned_execution_time_hours,0)) || '')'' as name
-from	im_costs c,
-	im_invoice_items ii
-	LEFT OUTER JOIN im_materials m ON (ii.item_material_id = m.material_id)
-where	c.cost_id = ii.invoice_id and
-	c.nav_order_nr in (
-		select	main_p.nav_order_nr
-		from	im_projects main_p
-		where	main_p.tree_sortkey in (
-				select  tree_root_key(task_p.tree_sortkey)
-				from	im_projects task_p
-				where	task_p.project_id = :task_id
-			)
-		)
-order by
-	c.cost_name,
-	ii.sort_order
-"}}
-'
-where widget_name = 'solidline_task_order_item';
-
-
 SELECT im_dynfield_attribute_new ('im_timesheet_task', 'nav_order_item_id', 'Order Item', 'solidline_task_order_item', 'integer', 'f', 100, 'f');
 
 
