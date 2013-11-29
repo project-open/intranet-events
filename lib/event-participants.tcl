@@ -67,46 +67,16 @@ set customer_options [db_list_of_lists customer_options "
 
 set order_item_options [db_list_of_lists order_items "
 select
-	cost_name || ' / ' || sort_order ||
-	-- ' - ' || item_name || 
-	' (' || round(coalesce(item_units,0)) || ' | ' || 
-	round(coalesce(rueckerfasst_units,0)) || ' | ' || 
-	round(coalesce(other_events_units,0)) || ')',
+	cost_name || ' / ' || sort_order,
 	item_id
-from
-	(select	*,
-		ii.sort_order as item_sort_order,
-                (       select  sum(item_units)
-                        from    im_costs rc,
-				im_invoice_items rii
-                        where   rc.cost_id = rii.invoice_id and
-				rc.cost_type_id = 3791 and
-				rii.nav_order_item_id = ii.item_id
-		) as rueckerfasst_units,
-		(	-- sum up the assignments of the order item in all other events
-			select	sum(oeoir.order_item_amount)
-			from	im_events oe,
-				im_event_order_item_rels oeoir
-			where	oeoir.order_item_id = ii.item_id and
-				oeoir.event_id = oe.event_id and
-				oe.event_id != :event_id
-		) as other_events_units
-	from	im_events e,
-		acs_rels ecr,
-		im_event_customer_rels iecr,
-		im_companies cust,
-		im_costs c,
-		im_invoice_items ii
-	where	e.event_id = :event_id and
-		ecr.rel_id = iecr.rel_id and
-		ecr.object_id_one = e.event_id and
-		ecr.object_id_two = cust.company_id and
-		c.customer_id = cust.company_id and
-		ii.invoice_id = c.cost_id and
-		c.cost_type_id = 3703
-	) t
-where	
-	coalesce(rueckerfasst_units,0) < item_units
+from	im_companies cust,
+	im_invoice_items ii,
+	im_costs c,
+	im_event_order_item_rels eoir
+where	ii.invoice_id = c.cost_id and
+	c.customer_id = cust.company_id and
+	eoir.event_id = :event_id and
+	eoir.order_item_id = ii.item_id
 order by
 	company_name,
 	cost_name,
