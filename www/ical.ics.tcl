@@ -24,12 +24,23 @@ if {!$read_p} {
 }
 
 db_1row event_info "
-	select	e.*,
+select	t.*,
+	im_name_from_user_id(organizer_id) as organizer_name,
+	im_email_from_user_id(organizer_id) as organizer_email
+from	(select	e.*,
 		to_char(e.event_start_date, 'YYYY-MM-DD') as event_start_date_date,
 		to_char(e.event_end_date, 'YYYY-MM-DD') as event_end_date_date,
-		acs_object__name(e.event_location_id) as event_location_name
+		acs_object__name(e.event_location_id) as event_location_name,
+		(select	min(r.object_id_two)
+		from	acs_rels r,
+			im_biz_object_members bom
+		where	r.object_id_one = e.event_id and
+			r.rel_id = bom.rel_id and
+			bom.object_role_id = 1308
+		) as organizer_id
 	from	im_events e
 	where	e.event_id = :event_id
+	) t
 "
 
 set event_start_hour_minute_second [parameter::get_from_package_key -package_key "intranet-events" -parameter "EventDefaultStartHour" -default "08:00:00"]
@@ -42,17 +53,35 @@ set event_end_date_pretty "$event_end_date_date $event_end_hour_minute_second"
 
 set DTSTART [calendar::outlook::ics_timestamp_format -timestamp $event_start_date_pretty]
 set DTEND [calendar::outlook::ics_timestamp_format -timestamp $event_end_date_pretty]
-
-# Put it together
-set ics_event "BEGIN:VCALENDAR\r\nPRODID:-//OpenACS//OpenACS 5.0 MIMEDIR//EN\r\nVERSION:2.0\r\nMETHOD:PUBLISH\r\nBEGIN:VEVENT\r\nDTSTART:$DTSTART\r\nDTEND:$DTEND\r\n"
-
 regexp {^([0-9]*)T} $DTSTART all CREATION_DATE
 set DESCRIPTION $event_description
 set TITLE $event_name
 
-append ics_event "LOCATION:$event_location_name\r\nTRANSP:OPAQUE\r\nSEQUENCE:0\r\nUID:$event_id\r\nDTSTAMP:$CREATION_DATE\r\nDESCRIPTION:$DESCRIPTION\r\nSUMMARY:$TITLE\r\nPRIORITY:5\r\nCLASS:PUBLIC\r\n"
 
-append ics_event "END:VEVENT\r\nEND:VCALENDAR\r\n"
+# Put it together
+set ics_event ""
+append ics_event "BEGIN:VCALENDAR\r\n"
+append ics_event "PRODID:-//OpenACS//OpenACS 5.0 MIMEDIR//EN\r\n"
+append ics_event "VERSION:2.0\r\n"
+append ics_event "METHOD:PUBLISH\r\n"
+append ics_event "BEGIN:VEVENT\r\n"
+append ics_event 	"DTSTART:$DTSTART\r\n"
+append ics_event 	"DTEND:$DTEND\r\n"
+
+# ORGANIZER leads to error in MS-Project
+# append ics_event 	"ORGANIZER;CN=\"$organizer_name\":$organizer_email\r\n"
+
+append ics_event 	"LOCATION:$event_location_name\r\n"
+append ics_event 	"TRANSP:OPAQUE\r\n"
+append ics_event 	"SEQUENCE:0\r\n"
+append ics_event 	"UID:$event_id\r\n"
+append ics_event 	"DTSTAMP:$CREATION_DATE\r\n"
+append ics_event 	"DESCRIPTION:$DESCRIPTION\r\n"
+append ics_event 	"SUMMARY:$TITLE\r\n"
+append ics_event 	"PRIORITY:5\r\n"
+append ics_event 	"CLASS:PUBLIC\r\n"
+append ics_event "END:VEVENT\r\n"
+append ics_event "END:VCALENDAR\r\n"
 
 
 # METHOD:REQUEST
