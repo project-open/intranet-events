@@ -344,6 +344,12 @@ if {$edit_event_status_p} {
     lappend event_elements {event_status_id:text(hidden),optional}
 }
 
+if {[info exists event_id]} {
+    lappend event_elements {event_consultant_abbreviation:text(text),optional {label "[lang::message::lookup {} intranet-events.Consultant_Abbreviations {Consultant Abbreviation}]"}  }
+    lappend event_elements {event_location_abbreviation:text(text),optional {label "[lang::message::lookup {} intranet-events.Location_Abbreviations {Location Abbreviation}]"}  }
+    lappend event_elements {event_resource_abbreviation:text(text),optional {label "[lang::message::lookup {} intranet-events.Resource_Abbreviations {Resource Abbreviation}]"}  }
+}
+
 ns_log Notice "new: ad_form: extend with event_elements"
 ad_form -extend -name event -form $event_elements
 
@@ -497,6 +503,10 @@ ad_form -extend -name event -on_request {
     {event_nr
         {![db_string event_count "select count(*) from im_events where event_nr = :event_nr and event_id != :event_id"]}
 	"[lang::message::lookup {} intranet-events.Event_nr_already_exists {Event Nr already exists}]" 
+    }
+    {event_end_date
+        {"t" == [db_string event_dates "select :event_start_date <= :event_end_date"]}
+	"[lang::message::lookup {} intranet-events.Event_end_date_after_start {End Date should end after start date}]" 
     }
 }
 

@@ -5,7 +5,6 @@
 
 
 
-
 -- SolidLine: Slow performance with very long
 -- im_invoices.note
 create or replace function im_invoice_tsearch ()
@@ -43,6 +42,9 @@ where
         category_type = 'Intranet Absence Type' and
         (enabled_p = 't' OR enabled_p is NULL);
 ;
+
+
+
 
 
 
@@ -165,6 +167,12 @@ create table im_events (
 					constraint im_events_start_const not null,
 	event_end_date			timestamptz
 					constraint im_events_end_const not null,
+					constraint im_events_date_ck
+					check(event_end_date > event_start_date),
+
+	event_consultant_abbreviation	text,
+	event_location_abbreviation	text,
+	event_resource_abbreviation	text,
 
 	-- Link to associated timesheet task + sweeper info
 	event_timesheet_task_id		integer
@@ -184,6 +192,15 @@ add constraint im_events_name_type_un unique (event_name, event_type_id);
 
 alter table im_events
 add column event_member_list_cached text;
+
+
+-- Fix events that end before they started...
+update im_events set event_end_date = event_start_date where event_end_date < event_start_date;
+-- ... and add a constraint in order to avoid this in the future
+alter table im_events
+add constraint constraint im_events_date_ck
+check(event_end_date >= event_start_date);
+
 
 
 -- Incices to speed up frequent queries
@@ -804,6 +821,19 @@ SELECT im_dynfield_attribute_new ('im_event', 'event_type_id', 'Type', 'event_ty
 SELECT im_dynfield_attribute_new ('im_event', 'event_status_id', 'Status', 'event_status', 'integer', 'f', 40, 't');
 -- SELECT im_dynfield_attribute_new ('im_event', 'event_location_id', 'Location', 'event_location', 'integer', 'f', 50, 't');
 SELECT im_dynfield_attribute_new ('im_event', 'event_material_id', 'Material', 'materials', 'integer', 'f', 100, 't');
+
+
+
+
+alter table im_events add column event_consultant_abbreviation text;
+alter table im_events add column event_location_abbreviation text;
+alter table im_events add column event_resource_abbreviation text;
+
+
+SELECT im_dynfield_attribute_new ('im_event', 'event_consultant_abbreviation', 'Abbreviation Consultant', 'textbox_medium', 'string', 'f', 200, 't');
+SELECT im_dynfield_attribute_new ('im_event', 'event_location_abbreviation', 'Abbreviation Location', 'textbox_medium', 'string', 'f', 210, 't');
+SELECT im_dynfield_attribute_new ('im_event', 'event_resource_abbreviation', 'Abbreviation Resource', 'textbox_medium', 'string', 'f', 220, 't');
+
 
 
 alter table im_events

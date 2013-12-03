@@ -59,6 +59,7 @@ namespace eval im_event {
 		-debug_p $debug_p \
 	    ]
 	} err_msg]} {
+	    ad_return_complaint 1 "<pre>$err_msg</pre>"
 	    append debug_html "error:\n$err_msg"
 	}
 
@@ -899,6 +900,9 @@ ad_proc im_event_cube {
 					    event_cost_center_code $event_cost_center_code \
 					    event_booked_seats $event_booked_seats \
 					    event_reserved_seats $event_reserved_seats \
+					    event_consultant_abbreviation $event_consultant_abbreviation \
+					    event_location_abbreviation $event_location_abbreviation \
+					    event_resource_abbreviation $event_resource_abbreviation \
 					   ]
 
 	# Remember the events that starting before the report interval
@@ -1571,6 +1575,9 @@ ad_proc im_event_cube_render_event {
     set event_cost_center_code $event_local_info(event_cost_center_code)
     set event_booked_seats $event_local_info(event_booked_seats)
     set event_reserved_seats $event_local_info(event_reserved_seats)
+    set event_consultant_abbreviation $event_local_info(event_consultant_abbreviation)
+    set event_location_abbreviation $event_local_info(event_location_abbreviation)
+    set event_resource_abbreviation $event_local_info(event_resource_abbreviation)
 
     set event_url [export_vars -base "/intranet-events/new" {{form_mode display} event_id}]
 
@@ -1578,6 +1585,7 @@ ad_proc im_event_cube_render_event {
 
     set consultants [list]
     set customers [list]
+    set trainers [list]
     for {set i 0} {$i < [llength $event_members]} {incr i} {
 	set rel_tuple_id [lindex $event_members $i]
 	set user_id [lindex $rel_tuple_id 0]
@@ -1589,7 +1597,13 @@ ad_proc im_event_cube_render_event {
 	switch $otype {
 	    user - person {
 		if {[im_profile::member_p -profile_id [im_profile_employees] -user_id $user_id]} {
-		    lappend consultants $user_name
+		    switch $role_id {
+			1308 {
+			    # Trainer role - special treatment
+			    lappend trainers $user_name
+			}
+		    }
+		    lappend consultants "$user_name"
 		} else {
 		    lappend customers "$customer - $user_name"
 		}
@@ -1609,19 +1623,22 @@ ad_proc im_event_cube_render_event {
     switch $location {
 	"user_list" {
 	    set kuerzel "$event_location_nr; $event_booked_seats; <i>$event_reserved_seats</i><br>$event_material_nr"
+	    if {"" != $event_consultant_abbreviation} { set kuerzel $event_consultant_abbreviation }
 	}
 	"location_list" {
 	    set event_consultant_list [list]
-	    foreach p $consultants {
+	    foreach p $trainers {
 		set initials ""
 		foreach n $p { append initials [string range $n 0 0] }
 		lappend event_consultant_list $initials
 	    }
 
 	    set kuerzel "[join $event_consultant_list ";"]; $event_booked_seats; <i>$event_reserved_seats</i><br>$event_material_nr"
+	    if {"" != $event_location_abbreviation} { set kuerzel $event_location_abbreviation }
 	}
 	"resource_list" {
 	    set kuerzel "$event_location_nr"
+	    if {"" != $event_resource_abbreviation} { set kuerzel $event_resource_abbreviation }
 	}
 	default {
 	    ad_return_complaint 1 "im_event_cube_render_event: Unknown location: '$location'"
@@ -1668,7 +1685,7 @@ ad_proc im_event_cube_render_event {
     }
     set result "
       <div style='position: relative'>
-<div style='position: absolute; top: $top_distance; left: -4; width: $event_width; z-index:10; background: yellow; opacity: 0.8;'>
+<div style='position: absolute; top: $top_distance; left: -3; width: $event_width; z-index:10; background: yellow; opacity: 0.8;'>
 <table cellspacing=0 cellpadding=0 border=$border_width bgcolor=#$bgcolor bordercolor=$bordercolor width='100%'>
 <tr>
 <td bgcolor=#$bgcolor>

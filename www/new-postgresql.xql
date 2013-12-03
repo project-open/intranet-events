@@ -43,7 +43,10 @@
 		event_location_id	= :event_location_id,
 		event_start_date	= $event_start_date_sql,
 		event_end_date		= $event_end_date_sql,
-		event_description	= :event_description
+		event_description	= :event_description,
+		event_consultant_abbreviation = :event_consultant_abbreviation,
+		event_location_abbreviation = :event_location_abbreviation,
+		event_resource_abbreviation = :event_resource_abbreviation
 	where
 		event_id = :event_id;
     </querytext>
