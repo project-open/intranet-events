@@ -19,12 +19,14 @@ set form_mode "display"
 # Order Items for Customer
 # ******************************************************
 
+set round_format "990.999"
+
 set order_item_options [db_list_of_lists order_items "
 select
 	company_name || ' - ' || cost_name || ' / ' || sort_order || ' - ' || item_name || 
-		     ' (' || round(coalesce(item_units,0)) || ' | ' || 
-		     round(coalesce(rueckerfasst_units,0)) || ' | ' || 
-		     round(coalesce(other_events_units,0)) || ')',
+		     ' (' || to_char(coalesce(item_units,0),:round_format) || ' | ' || 
+		     to_char(coalesce(rueckerfasst_units,0),:round_format) || ' | ' || 
+		     to_char(coalesce(other_events_units,0),:round_format) || ')',
 	item_id
 from
 	(select	*,
