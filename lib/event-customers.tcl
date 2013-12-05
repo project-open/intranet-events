@@ -19,6 +19,10 @@ set form_mode "display"
 # Create the list of all attributes of the current type
 # ******************************************************
 
+set name_l10n [lang::message::lookup "" intranet-events.Name "Name"]
+set path_l10n [lang::message::lookup "" intranet-events.Path "Path"]
+
+
 list::create \
     -name customer_list \
     -multirow customer_list_multirow \
@@ -27,11 +31,11 @@ list::create \
     -no_data [lang::message::lookup "" intranet-events.No_customer_associated_yet "No customer associated yet"] \
     -elements {
 	company_name { 
-	    label "Name" 
+	    label $name_l10n
 	    link_url_col company_url
 	}
 	company_path { 
-	    label "Path" 
+	    label $path_l10n
 	    link_url_col company_url
 	}
 	company_delete {
