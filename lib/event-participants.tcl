@@ -144,7 +144,7 @@ list::create \
 	bom_note { 
 	    label "$comment_l10n" 
 	    display_template {
-		<input type=text size=30 name=bom_note.@participant_list_multirow.participant_id@ value='@participant_list_multirow.note_quoted@'>
+		<textarea name=bom_note.@participant_list_multirow.participant_id@>@participant_list_multirow.note_quoted@</textarea>
 	    }
 	}
 	participant_delete {

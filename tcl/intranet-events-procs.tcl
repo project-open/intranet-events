@@ -148,7 +148,7 @@ namespace eval im_event {
 	    " -default ""]
 	    if {"" == $parent_project_id} {
 		lappend debug "task_sweeper_helper: Did not find project '${year}_events' - creating a new one"
-		set parent_project_id [project::new \
+		set parent_project_id [im_project::new \
 					   -project_name       "$year Events" \
 					   -project_nr         "${year}_events" \
 					   -project_path       "${year}_events" \

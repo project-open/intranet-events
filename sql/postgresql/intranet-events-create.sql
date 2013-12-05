@@ -76,16 +76,35 @@ update acs_object_types set
 	status_category_type = 'Intranet Event Status'
 where object_type = 'im_event';
 
+
+alter table im_biz_object_role_map
+drop constraint im_biz_object_role_map_un;
+
+create unique index im_biz_object_role_map_un
+on im_biz_object_role_map (coalesce(acs_object_type, ''), coalesce(object_type_id,0), coalesce(object_role_id,0));
+
+
+
 -- Create "Trainer" role for tickets
 SELECT im_category_new (1307, 'Consultant', 'Intranet Biz Object Role');
 SELECT im_category_new (1308, 'Trainer', 'Intranet Biz Object Role');
-
-update im_categories set category_gif = 'c' where category_id = 1307;
+SELECT im_category_new (1309, 'CoTrainer', 'Intranet Biz Object Role');
+SELECT im_category_new (1310, 'Mentor', 'Intranet Biz Object Role');
+SELECT im_category_new (1311, 'Participant', 'Intranet Biz Object Role');
+ 
+ 
+update im_categories set category_gif = '' where category_id = 1307;
 update im_categories set category_gif = 'star' where category_id = 1308;
+update im_categories set category_gif = 'c' where category_id = 1309;
+update im_categories set category_gif = 'm' where category_id = 1310;
+update im_categories set category_gif = 't' where category_id = 1311;
 
-insert into im_biz_object_role_map values ('im_event',null,1300);
-insert into im_biz_object_role_map values ('im_event',null,1307);
+-- insert into im_biz_object_role_map values ('im_event',null,1300);
+-- insert into im_biz_object_role_map values ('im_event',null,1307);
 insert into im_biz_object_role_map values ('im_event',null,1308);
+insert into im_biz_object_role_map values ('im_event',null,1309);
+insert into im_biz_object_role_map values ('im_event',null,1310);
+insert into im_biz_object_role_map values ('im_event',null,1311);
 
 
 -- Define how to link to Event pages from the Forum or the
