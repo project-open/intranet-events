@@ -300,7 +300,6 @@ ad_form \
     -export {next_url return_url} \
     -form {
 	event_id:key
-	{event_name:text(hidden),optional {label $event_name_label} {html {size 50}}}
 	{event_nr:text(hidden) {label $event_nr_label} {html {size 30}} }
 	{event_location_id:text(select) {label "[lang::message::lookup {} intranet-events.Location Location]"} {options $location_options}}
 	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options}}
@@ -348,6 +347,11 @@ if {[info exists event_id]} {
     lappend event_elements {event_consultant_abbreviation:text(text),optional {label "[lang::message::lookup {} intranet-events.Consultant_Abbreviations {Consultant Abbreviation}]"}  }
     lappend event_elements {event_location_abbreviation:text(text),optional {label "[lang::message::lookup {} intranet-events.Location_Abbreviations {Location Abbreviation}]"}  }
     lappend event_elements {event_resource_abbreviation:text(text),optional {label "[lang::message::lookup {} intranet-events.Resource_Abbreviations {Resource Abbreviation}]"}  }
+
+    lappend event_elements {event_name:text(text),optional {label $event_name_label} {html {size 80}}}
+
+} else {
+    lappend event_elements {event_name:text(hidden),optional}
 }
 
 ns_log Notice "new: ad_form: extend with event_elements"
