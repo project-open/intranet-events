@@ -106,6 +106,10 @@ list::create \
     -elements {
 	company_name {
 	    label "$company_l10n" 
+	    display_template {
+		<a href="@participant_list_multirow.company_url@" title="@participant_list_multirow.company_mouseover@"
+		>@participant_list_multirow.company_name@</a>
+	    }
 	    link_url_col company_url	    
 	}
 	first_names { 
@@ -162,7 +166,7 @@ list::create \
     }
 
 
-db_multirow -extend {participant_url company_name company_url delete_url reserved_enabled confirmed_enabled order_item_options_html note_quoted} participant_list_multirow get_participants "
+db_multirow -extend {participant_url company_name company_url company_mouseover delete_url reserved_enabled confirmed_enabled order_item_options_html note_quoted} participant_list_multirow get_participants "
 	select	*,
 		u.user_id as participant_id,
 		im_category_from_id(bom.member_status_id) as participant_status,
@@ -190,6 +194,9 @@ db_multirow -extend {participant_url company_name company_url delete_url reserve
     set participant_url [export_vars -base "/intranet/users/view" {user_id return_url}]
     set company_url [export_vars -base "/intranet/companies/view" {company_id return_url}]
     set company_name [acs_object_name $company_id]
+    set company_key_account_id [util_memoize [list db_string key_account "select min(r.object_id_two) from acs_rels r where r.object_id_one = $company_id and r.object_id_two in (select member_id from group_distinct_member_map where group_id = [im_profile_employees])" -default ""]]
+    set company_key_account_name [acs_object_name $company_key_account_id]
+    set company_mouseover "$company_key_account_name"
     set reserved_enabled ""
     set confirmed_enabled ""
     if {[im_event_participant_status_reserved] == $member_status_id} { set reserved_enabled "selected" }
