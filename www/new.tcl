@@ -505,7 +505,7 @@ ad_form -extend -name event -on_request {
 	"[lang::message::lookup {} intranet-events.Event_nr_already_exists {Event Nr already exists}]" 
     }
     {event_end_date
-        {"t" == [db_string event_dates "select :event_start_date <= :event_end_date"]}
+        {"t" == [db_string event_dates "select [template::util::date get_property sql_date $event_start_date]::date <= [template::util::date get_property sql_date $event_end_date]::date"]}
 	"[lang::message::lookup {} intranet-events.Event_end_date_after_start {End Date should end after start date}]" 
     }
 }
