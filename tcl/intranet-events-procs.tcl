@@ -659,7 +659,7 @@ ad_proc im_event_cube {
     # ---------------------------------------------------------------
     
     # Initialize the hash for holidays.
-    set bank_holiday_color [util_memoize [list db_string holiday_color "select aux_string2 from im_categories where category_id = [im_absence_type_bank_holiday]"]]
+    set bank_holiday_color [util_memoize [list db_string holiday_color "select aux_string2 from im_categories where category_id = [im_user_absence_type_bank_holiday]"]]
     set days_of_week_pretty [lang::message::lookup "" acs-lang.localization-abday]
     array set holiday_hash {}
     set day_list [list]
