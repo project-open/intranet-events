@@ -11,7 +11,6 @@ ad_page_contract {
     @author frank.bergmann@event-open.com
 } {
     { order_by "date" }
-    { mine_p "all" }
     { start_date "" }
     { event_name "" }
     { event_status_id:integer "" } 
@@ -27,11 +26,11 @@ ad_page_contract {
     { how_many "" }
     { view_name "event_list" }
     { timescale "next_3w" }
-    { report_show_users_p ""}
-    { report_show_locations_p ""}
-    { report_show_resources_p ""}
-    { report_show_event_list_p ""}
-    { report_show_all_users_p ""}
+    { report_event_selection ""}
+    { report_user_selection ""}
+    { report_location_selection ""}
+    { report_resource_selection ""}
+    { report_show_event_list_p "1"}
 }
 
 # ---------------------------------------------------------------
@@ -74,8 +73,8 @@ if {[catch {
 
 # Unprivileged users can only see their own events
 set view_events_all_p [im_permission $current_user_id "view_events_all"]
-if {"all" == $mine_p && !$view_events_all_p} {
-    set mine_p "mine"
+if {!$view_events_all_p} {
+    set report_user_selection "mine"
 }
 
 if { [empty_string_p $how_many] || $how_many < 1 } {
@@ -83,7 +82,6 @@ if { [empty_string_p $how_many] || $how_many < 1 } {
 }
 set end_idx [expr $start_idx + $how_many]
 
-set mine_all_l10n [lang::message::lookup "" intranet-core.Mine_All "Mine/All"]
 set all_l10n [lang::message::lookup "" intranet-core.All "All"]
 set timescale_l10n [lang::message::lookup "" intranet-events.Timescale "Timescale"]
 
@@ -92,6 +90,7 @@ set show_locations_l10n [lang::message::lookup "" intranet-events.Show_Locations
 set show_resources_l10n [lang::message::lookup "" intranet-events.Show_Resources_P "Show Resources?"]
 set show_event_list_l10n [lang::message::lookup "" intranet-events.Show_Event_List_P "Show Event List?"]
 set show_all_users_l10n [lang::message::lookup "" intranet-events.Show_All_Users_P "Show All Users?"]
+set show_all_locations_l10n [lang::message::lookup "" intranet-events.Show_All_Locations_P "Show All Locations?"]
 
 set current_year [string range $start_date 0 3]
 set next_year [expr $current_year + 1]
@@ -201,7 +200,7 @@ db_foreach column_list_sql $column_sql {
 	# Build the column header
 	regsub -all " " $column_name "_" col_txt
 	set col_txt [lang::message::lookup "" intranet-events.$col_txt $column_name]
-	set col_url [export_vars -base "index" {event_id mine_p start_date timescale report_show_users_p report_show_locations_p report_show_resources_p report_show_event_list_p report_show_all_users_p event_name event_creator_id {order_by $column_name}}]
+	set col_url [export_vars -base "index" {event_id start_date timescale report_user_selection report_event_selection report_location_selection report_resource_selection report_show_event_list_p event_name event_creator_id {order_by $column_name}}]
 
 	# Append the DynField values from the Filter as pass-through variables
 	# so that sorting won't alter the selected events
@@ -250,25 +249,6 @@ set form_id "event_filter"
 set object_type "im_event"
 set action_url "/intranet-events/index"
 set form_mode "edit"
-
-set mine_p_options {}
-if {$view_events_all_p} { 
-    lappend mine_p_options [list $all_l10n "all" ] 
-}
-lappend mine_p_options [list [lang::message::lookup "" intranet-events.Mine "Mine"] "mine"]
-
-# Add custom searches to drop-down
-if {[im_table_exists im_sql_selectors]} {
-    set selector_sql "
-	select	s.name, s.short_name
-	from	im_sql_selectors s
-	where	s.object_type = :object_type
-    "
-    db_foreach selectors $selector_sql {
-	lappend mine_p_options [list $name $short_name]
-    }
-}
-
 
 set timescale_types [list \
                          "next_3w" [lang::message::lookup "" intranet-timesheet2.Next_3_Weeks "Next 3 Weeks"] \
@@ -331,20 +311,22 @@ ad_form \
     -mode $form_mode \
     -method GET \
     -form {
-    	{mine_p:text(select),optional {label "$mine_all_l10n"} {options $mine_p_options }}
 	{start_date:text(text) {label "[_ intranet-timesheet2.Start_Date]"} {html {size 10}} {after_html {<input type="button" style="height:20px; width:20px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendar('start_date', 'y-m-d');" >}}}
 
     	{timescale:text(select),optional {label "$timescale_l10n"} {options $timescale_options }}
-	{report_show_users_p:integer(checkbox),optional {label "$show_users_l10n"} {options {{"" 1}}} }
-	{report_show_locations_p:integer(checkbox),optional {label "$show_locations_l10n"} {options {{"" 1}}} }
-	{report_show_resources_p:integer(checkbox),optional {label "$show_resources_l10n"} {options {{"" 1}}} }
-	{report_show_event_list_p:integer(checkbox),optional {label "$show_event_list_l10n"} {options {{"" 1}}} }
-	{report_show_all_users_p:integer(checkbox),optional {label "$show_all_users_l10n"} {options {{"" 1}}} }
+	{report_event_selection:text(hidden),optional}
+	{report_user_selection:text(hidden),optional}
+	{report_location_selection:text(hidden),optional}
+	{report_resource_selection:text(hidden),optional}
+	{report_show_event_list_p:text(hidden),optional }
 	{event_name:text(text),optional {label "[_ intranet-core.Name]"} {html {size 12}}}
 	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options} }
 	{event_cost_center_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Cost_Center {Cost Center}]"} {options $cost_center_options} }
 	{event_status_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Status Status]"} {custom {category_type "Intranet Event Status" translate_p 1 package_key "intranet-core"}} }
     }
+
+#	{report_show_event_list_p:integer(checkbox),optional {label "$show_event_list_l10n"} {options {{"" 1}}} }
+
 
 if {$view_events_all_p} {  
     ad_form -extend -name $form_id -form {
@@ -357,18 +339,20 @@ if {$view_events_all_p} {
 
 }
 
-template::element::set_value $form_id mine_p $mine_p
+
+
 template::element::set_value $form_id start_date $start_date
 template::element::set_value $form_id timescale $timescale
 
 template::element::set_value $form_id event_material_id $event_material_id
 template::element::set_value $form_id event_cost_center_id $event_cost_center_id
 
-template::element::set_value $form_id report_show_users_p [im_opt_val report_show_users_p]
-template::element::set_value $form_id report_show_locations_p [im_opt_val report_show_locations_p]
-template::element::set_value $form_id report_show_resources_p [im_opt_val report_show_resources_p]
+template::element::set_value $form_id report_event_selection [im_opt_val report_events_selection]
+template::element::set_value $form_id report_user_selection [im_opt_val report_users_selection]
+template::element::set_value $form_id report_location_selection [im_opt_val report_location_selection]
+template::element::set_value $form_id report_resource_selection [im_opt_val report_resource_selection]
+
 template::element::set_value $form_id report_show_event_list_p [im_opt_val report_show_event_list_p]
-template::element::set_value $form_id report_show_all_users_p [im_opt_val report_show_all_users_p]
 
 im_dynfield::append_attributes_to_form \
     -object_type $object_type \
@@ -379,16 +363,8 @@ im_dynfield::append_attributes_to_form \
     -page_url "/intranet-events/index"
 
 # Set the form values from the HTTP form variable frame
-set org_mine_p $mine_p
 im_dynfield::set_form_values_from_http -form_id $form_id
 im_dynfield::set_local_form_vars_from_http -form_id $form_id
-set mine_p $org_mine_p
-
-# A customer should not get the "My queue" filter pre-selected - should he get the "My queue" selection at all? 
-if { [im_profile::member_p -profile_id [im_customer_group_id] -user_id $current_user_id] && [string first "mine" [string tolower $mine_p_options]] != -1 } {
-    template::element::set_value $form_id mine_p "mine"
-    set mine_p "mine"
-}
 
 array set extra_sql_array [im_dynfield::search_sql_criteria_from_form \
 			       -form_id $form_id \
@@ -460,32 +436,6 @@ if { ![empty_string_p $letter] && [string compare $letter "ALL"] != 0 && [string
     lappend criteria "im_first_letter_default_to_a(e.event_name) = upper(:letter)"
 }
 
-switch $mine_p {
-    "all" { }
-    "queue" { }
-    "mine" {
-	lappend criteria "(
-		e.event_id in (
-			select object_id_two
-			from acs_rels
-			where object_id_one = :current_user_id
-		UNION	select object_id
-			from acs_objects
-			where creation_user = :current_user_id
-		)
-	)"
-    }
-    "default" { 
-	# The short name of a SQL selector
-	set selector_sql [db_string selector_sql "select selector_sql from im_sql_selectors where short_name = :mine_p" -default ""]
-	if {"" == $selector_sql} {
-	    ad_return_complaint 1 "Error:<br>Invalid variable mine_p = '$mine_p'" 
-	    ad_script_abort
-	}
-
-	lappend criteria "e.event_id in ($selector_sql)"
-    }
-}
 
 set order_by_clause "order by e.event_id DESC"
 
@@ -784,10 +734,7 @@ if {!$view_events_all_p} { set table_submit_html "" }
 # Calendar display for vacation days
 # ---------------------------------------------------------------
 
-set event_cube_html ""
-if {1 == $report_show_users_p || 1 == $report_show_locations_p || 1 == $report_show_resources_p} {
-    set event_cube_html [im_event_cube \
-			 -report_user_selection $mine_p \
+set event_cube_html [im_event_cube \
 			 -event_status_id $event_status_id_org \
 			 -event_type_id $event_type_id_org \
 			 -event_material_id $event_material_id_org \
@@ -798,12 +745,11 @@ if {1 == $report_show_users_p || 1 == $report_show_locations_p || 1 == $report_s
 			 -report_start_date $report_start_date \
 			 -report_end_date $report_end_date \
 			 -report_user_group_id [im_profile_employees] \
-			 -report_show_users_p $report_show_users_p \
-			 -report_show_locations_p $report_show_locations_p \
-			 -report_show_resources_p $report_show_resources_p \
-			 -report_show_all_users_p $report_show_all_users_p \
+			 -report_event_selection $report_event_selection \
+			 -report_user_selection $report_user_selection \
+			 -report_location_selection $report_location_selection \
+			 -report_resource_selection $report_resource_selection \
 			]
-}
 
 
 # ----------------------------------------------------------
@@ -930,7 +876,7 @@ if {"" == $dashboard_column_html} {
 # ---------------------------------------------------------------
 
 set menu_select_label ""
-set event_navbar_html [im_event_navbar $letter "/intranet-events/index" $next_page_url $previous_page_url [list form_mode mine_p start_date timescale report_show_users_p report_show_locations_p report_show_resources_p event_name event_status_id event_type_id event_creator_id start_idx order_by how_many view_name] $menu_select_label]
+set event_navbar_html [im_event_navbar $letter "/intranet-events/index" $next_page_url $previous_page_url [list form_mode start_date timescale report_user_selection report_user_selection report_resource_selection report_show_resources_p event_name event_status_id event_type_id event_creator_id start_idx order_by how_many view_name] $menu_select_label]
 
 
 # ---------------------------------------------------------------

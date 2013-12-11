@@ -128,8 +128,8 @@ list::create \
 	    label "$status_l10n" 
 	    display_template {
 		<select name=participant_status_id.@participant_list_multirow.participant_id@>
-		<option value=[im_event_participant_status_reserved] @participant_list_multirow.reserved_enabled@>Reserved</option>
-		<option value=[im_event_participant_status_confirmed] @participant_list_multirow.confirmed_enabled@>Confirmed</option>
+		<option value=[im_event_participant_status_reserved] @participant_list_multirow.reserved_enabled@>[lang::message::lookup "" intranet-events.Reservied "Reserved"]</option>
+		<option value=[im_event_participant_status_confirmed] @participant_list_multirow.confirmed_enabled@>[lang::message::lookup "" intranet-events.Confirmed Confirmed]</option>
 		</select>
 	    }
 	}

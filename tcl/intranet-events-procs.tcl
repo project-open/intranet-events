@@ -28,6 +28,11 @@ ad_proc -public im_event_participant_status_deleted {} { return 82290 }
 
 
 
+ad_proc -public im_profile_consultants {} {
+     return [im_profile::profile_id_from_name -profile "Consultants"]
+}
+
+
 namespace eval im_event {
 
 # ----------------------------------------------------------------------
@@ -572,14 +577,13 @@ ad_proc im_event_cube {
     {-event_location_id "" }
     {-event_creator_id "" }
     {-event_name "" }
-    {-report_user_selection "all" }
     {-report_start_date "" }
     {-report_end_date ""}
     {-report_user_group_id "" }
-    {-report_show_users_p "" }
-    {-report_show_locations_p "" }
-    {-report_show_resources_p "" }
-    {-report_show_all_users_p ""}
+    {-report_event_selection "" }
+    {-report_user_selection "" }
+    {-report_location_selection ""}
+    {-report_resource_selection "" }
 } {
     Returns a rendered cube with a graphical event display.
 } {
@@ -602,29 +606,30 @@ ad_proc im_event_cube {
     # Limit the number of users and days
     # ---------------------------------------------------------------
 
-    set criteria [list]
+    set event_criteria [list]
+    set resource_criteria [list]
     if {"" != $event_type_id && 0 != $event_type_id} {
-	lappend criteria "e.event_type_id = '$event_type_id'"
+	lappend event_criteria "e.event_type_id = '$event_type_id'"
     }
     if {"" != $event_status_id && 0 != $event_status_id} {
-	lappend criteria "e.event_status_id = '$event_status_id'"
+	lappend event_criteria "e.event_status_id = '$event_status_id'"
     }
     if {"" != $event_creator_id && 0 != $event_creator_id} {
-	lappend criteria "o.creation_user = '$event_creator_id'"
+	lappend event_criteria "o.creation_user = '$event_creator_id'"
     }
     if {"" != $event_material_id && 0 != $event_material_id} {
-	lappend criteria "e.event_material_id = '$event_material_id'"
+	lappend event_criteria "e.event_material_id = '$event_material_id'"
     }
     if {"" != $event_cost_center_id && 0 != $event_cost_center_id} {
-	lappend criteria "e.event_cost_center_id = '$event_cost_center_id'"
+	lappend event_criteria "e.event_cost_center_id = '$event_cost_center_id'"
     }
     if {"" != $event_location_id && 0 != $event_location_id} {
-	lappend criteria "e.event_location_id = '$event_location_id'"
+	lappend event_criteria "e.event_location_id = '$event_location_id'"
     }
     if {"" != $event_name} {
 	set event_name_norm [db_string norm_event_name "select norm_text(:event_name)"]
 	set event_name_ts [join $event_name_norm " & "]
-	lappend criteria "e.event_id in (
+	lappend event_criteria "e.event_id in (
 		select	so.object_id
 		from	im_search_objects so
 		where	so.object_type_id = 10 and	-- im_event object type
@@ -632,12 +637,13 @@ ad_proc im_event_cube {
 	)"
     }
 
-    switch $report_user_selection {
-	"all" {
-	    # Nothing
+    # Limits on the number of events shown
+    switch $report_event_selection {
+	"" - all {
 	}
-	"mine" {
-	    lappend criteria "(
+	mine {
+	    # Limit the list of _events_ to the ones related to the current user
+	    lappend event_criteria "(
 		e.event_id in (
 			select object_id_two
 			from acs_rels
@@ -648,10 +654,14 @@ ad_proc im_event_cube {
 		)
 	    )"
 	}
+	default  {
+	    ad_return_complaint 1 "im_event_cube: Found unknown report_event_select=$report_event_selection"
+	}
     }
-    set where_clause [join $criteria " and\n            "]
-    if {![empty_string_p $where_clause]} {
-	set where_clause " and $where_clause"
+
+    set event_where_clause [join $event_criteria " and\n            "]
+    if {![empty_string_p $event_where_clause]} {
+	set event_where_clause " and $event_where_clause"
     }
 
     # ---------------------------------------------------------------
@@ -679,22 +689,68 @@ ad_proc im_event_cube {
 	set date_day_of_week_pretty [lindex $days_of_week_pretty $date_day_of_week]
 	if {$date_weekday == "Sat" || $date_weekday == "Sun"} { set holiday_hash($date_date) $bank_holiday_color }
 	set date_month_l10n [lang::message::lookup "" intranet-events.Month_$date_month $date_month]
-	lappend day_list [list $date_date $date_day_of_month $date_month_l10n $date_year $date_day_of_week_pretty $date_week]
+	lappend day_list [list $date_date $date_day_of_month $date_month_l10n $date_year $date_day_of_week_pretty $date_week $date_day_of_week]
     }
 
     # ---------------------------------------------------------------
     # Determine Left Dimension
     # ---------------------------------------------------------------
 
-    set group_sql ""
+    set user_criteria [list]
     if {"" != $report_user_group_id && 0 != $report_user_group_id} {
-	set group_sql "and u.user_id in (select member_id from group_distinct_member_map where group_id = :report_user_group_id)"
+	lappend user_criteria "u.user_id in (select member_id from group_distinct_member_map where group_id = :report_user_group_id)"
     }
 
-    # Select any user who has ever been member of an event
-    set user_list {}
-    if {1 == $report_show_users_p} {
-	set user_list [db_list_of_lists user_list "
+    # Limit on the number of users shown
+    switch $report_user_selection {
+	"" - consultants_with_events {
+	    lappend user_criteria "u.user_id in (select member_id from group_distinct_member_map where group_id = [im_profile_consultants])"
+	    lappend user_criteria "u.user_id in (
+			-- users who are member of any event
+			select distinct
+				u.user_id as user_id
+			from	users u,
+				acs_rels r,
+				im_events e
+			where	r.object_id_one = e.event_id and
+				r.object_id_two = u.user_id
+	    )"
+	}
+	all_consultants {
+	    lappend user_criteria "u.user_id in (select member_id from group_distinct_member_map where group_id = [im_profile_consultants] )"
+	}
+	employees_with_events {
+	    lappend user_criteria "u.user_id in (select member_id from group_distinct_member_map where group_id = [im_profile_employees])"
+	    lappend user_criteria "u.user_id in (
+			-- users who are member of any event
+			select distinct
+				u.user_id as user_id
+			from	users u,
+				acs_rels r,
+				im_events e
+			where	r.object_id_one = e.event_id and
+				r.object_id_two = u.user_id
+	    )"
+	}
+	all_employees {
+	    lappend user_criteria "u.user_id in (select member_id from group_distinct_member_map where group_id = [im_profile_employees])"
+	}
+	none {
+	    lappend user_criteria "u.user_id in (select 0 from dual)"
+	}
+	default  {
+	    ad_return_complaint 1 "im_event_cube: Found unknown report_user_select=$report_user_selection"
+	}
+    }
+
+
+    set user_where_clause [join $user_criteria " and\n            "]
+    if {![empty_string_p $user_where_clause]} {
+	set user_where_clause " and $user_where_clause"
+    }
+
+    # Select the list of users to be shown as left dimensions
+    set user_list [db_list_of_lists user_list "
 		select	user_id,
 			user_name,
 			department,
@@ -717,13 +773,8 @@ ad_proc im_event_cube {
 				im_events e
 			where	r.object_id_one = e.event_id and
 				r.object_id_two = u.user_id and
-				(
-				e.event_start_date <= :report_end_date::date and
-				e.event_end_date >= :report_start_date::date
-				OR 1 = :report_show_all_users_p
-				)
-				and
 				u.user_id not in (
+					-- exclude deleted memberships 
 					select	u.user_id
 					from	users u,
 						acs_rels r,
@@ -733,15 +784,15 @@ ad_proc im_event_cube {
 						r.object_id_one = -2 and
 						mr.member_state != 'approved'
 				)
-				$group_sql
+				$user_where_clause
 			) t
 		order by office_path, user_name
-	"]
-    }
+    "]
 
-    set location_list {}
-    if {1 == $report_show_locations_p} {
-	set location_list [db_list_of_lists location_list "
+
+    set location_criteria [list]
+
+    set location_list [db_list_of_lists location_list "
 		select distinct
 			ci.conf_item_id as location_id,
 			ci.conf_item_name as location_name,
@@ -752,21 +803,19 @@ ad_proc im_event_cube {
 			LEFT OUTER JOIN im_conf_items ci ON (e.event_location_id = ci.conf_item_id)
 		where	e.event_location_id = ci.conf_item_id and
 			ci.conf_item_name is not null and
-			ci.conf_item_status_id not in ([im_conf_item_status_deleted]) and
-			(
-				e.event_start_date <= :report_end_date::date and
-				e.event_end_date >= :report_start_date::date
-			OR	1 = :report_show_all_users_p
-			)
-
-
+			ci.conf_item_status_id not in ([im_conf_item_status_deleted])
 		order by ci.conf_item_name
-	"]
-    }
+    "]
 
-    set resource_list {}
-    if {1 == $report_show_resources_p} {
-	set resource_list [db_list_of_lists resource_list "
+#			(
+#				e.event_start_date <= :report_end_date::date and
+#				e.event_end_date >= :report_start_date::date
+#			OR	1 = :report_show_all_locations_p
+#			)
+
+
+
+    set resource_list [db_list_of_lists resource_list "
 		select distinct
 			ci.conf_item_id,
 			ci.conf_item_name as resource_name,
@@ -780,8 +829,7 @@ ad_proc im_event_cube {
 			e.event_end_date >= :report_start_date::date and
 			ci.conf_item_status_id not in ([im_conf_item_status_deleted])
 		order by ci.conf_item_name
-	"]
-    }
+     "]
 
     # ---------------------------------------------------------------
     # Events per user
@@ -818,8 +866,10 @@ ad_proc im_event_cube {
 	where	o.object_id = e.event_id and
 		e.event_start_date <= :report_end_date::date and
 		e.event_end_date >= :report_start_date::date
-		$where_clause
+		$event_where_clause
     "
+
+# ad_return_complaint 1 $event_where_clause
 
     array set user_event_hash {}
     array set location_event_hash {}
@@ -944,7 +994,7 @@ ad_proc im_event_cube {
 		r.object_id_two = ci.conf_item_id and
 		e.event_start_date <= :report_end_date::date and
 		e.event_end_date >= :report_start_date::date
-		$where_clause
+		$event_where_clause
     "
     array set resource_hash {}
     db_foreach resources $resource_sql {
@@ -1179,6 +1229,7 @@ ad_proc im_event_cube {
 	set date_year [lindex $day 3]
 	set date_weekday [lindex $day 4]
 	set date_week [lindex $day 5]
+	set date_day_of_week [lindex $day 6]
 
 	if {0 == $ctr} { set cell_week $date_week }
 	if {$date_week != $cell_week} {
@@ -1195,10 +1246,24 @@ ad_proc im_event_cube {
     append table_header "</tr>\n"
     append table_html $table_header
 
+    # A form with select box for filtering the users shown
+    set user_pairs [list \
+			consultants_with_events [lang::message::lookup "" intranet-events.Consultants_with_events "Consultants with events"] \
+			all_consultants [lang::message::lookup "" intranet-events.All_consultants "All Consultants"] \
+			employees_with_events [lang::message::lookup "" intranet-events.Employees_with_events "Employees with events"] \
+			all_employees [lang::message::lookup "" intranet-events.All_employees "All Employees"] \
+			none [lang::message::lookup "" intranet-events.No_users "No Users"] \
+		       ]
+    # mine [lang::message::lookup "" intranet-events.Mine "Mine"] \
+
+    set user_select [im_select -javascript "onchange=\"this.form.submit()\"" -ad_form_option_list_style_p 0 -package_key "intranet-events" report_user_selection $user_pairs ""]
+    set user_pass_through [export_form_vars form_mode start_date timescale report_location_selector report_resource_selector report_show_resources_p event_name event_status_id event_type_id event_creator_id start_idx order_by how_many view_name]
+    set user_form "<form name=report_user_selection action=/intranet-events/index> $user_select $user_pass_through</form>"
+
 
     # Row with month/day of month
     set table_header "<tr class=rowtitle>\n"
-    append table_header "<td class=rowtitle colspan=2>[_ intranet-core.User]</td>\n"
+    append table_header "<td class=rowtitle colspan=2>$user_form</td>\n"
     foreach day $day_list {
 	set date_date [lindex $day 0]
 	set date_day_of_month [lindex $day 1]
@@ -1206,6 +1271,7 @@ ad_proc im_event_cube {
 	set date_year [lindex $day 3]
 	set date_weekday [lindex $day 4]
 	set date_week [lindex $day 5]
+	set date_day_of_week [lindex $day 6]
 	append table_header "<td class=rowtitle align=center><div style=\"width: ${cell_width}px\">$date_weekday $date_day_of_month $date_month_of_year</div></td>\n"
     }
     append table_header "<td class=rowtitle></td>\n"
@@ -1232,6 +1298,7 @@ ad_proc im_event_cube {
 	set office_url [export_vars -base "/intranet/offices/view" {return_url {office_id $user_office_id}}]
 	append table_body "<td bgcolor='$user_color_code' colspan=2><nobr><a href='[export_vars -base $user_url {user_id}]'>$user_name</a></nobr><br><nobr><a href='$office_url'></a>$user_office_name</nobr></td>\n"
 
+	# ------------------------------------------------------------
 	# Deal with the events starting before the actual reporting interval
 	set line_events [list]
 	set events [list]
@@ -1252,9 +1319,18 @@ ad_proc im_event_cube {
 	    lappend line_events $eid
 	}
 
+	# ------------------------------------------------------------
 	# Loop through the days for the user
+	set week_ctr 1
 	foreach day $day_list {
 	    set date_date [lindex $day 0]
+	    set date_day_of_month [lindex $day 1]
+	    set date_month_of_year [lindex $day 2]
+	    set date_year [lindex $day 3]
+	    set date_weekday [lindex $day 4]
+	    set date_week [lindex $day 5]
+	    set date_day_of_week [lindex $day 6]
+
 	    set key "$user_id-$date_date"
 	    set value [list]
 
@@ -1287,21 +1363,31 @@ ad_proc im_event_cube {
 		}
 	    }
 	    
+	    # Shows date and consultant every N weeks
+	    # Add the user name every Nth Saturday
+	    # and the date + KW every Nth sunday
+	    set show_kw_every_n_weeks 5
+	    if {0 == $date_day_of_week} { incr week_ctr }
+	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
+		if {0 == $date_day_of_week} {
+		    # Sunday - Add the date
+		    append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+		}
+	    }
+
+	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
+		if {6 == $date_day_of_week} { 
+		    # Saturday - Add the sconsultant
+		    append event_html "<nobr><a href='[export_vars -base $user_url {user_id}]'>$user_name</a></nobr><br><nobr><a href='$office_url'></a>$user_office_name"
+		}
+	    }
+
+
 	    append table_body [im_event_cube_render_cell -value $value -event_html $event_html]
 	    ns_log NOTICE "intranet-events-procs::im_event_cube_render_cell: $value"
 	}
 
-	# Show the list of events in this line
-	set ttt {
-	set line_event_entries {}
-	foreach eid $line_events {
-	    set event_values $event_info_hash($eid)
-	    set event_name [lindex $event_values 3]
-	    lappend line_event_entries "<a href=[export_vars -base "/intranet-events/new" {{event_id $eid} return_url {form_mode display}}]>$event_name</a>"
-	}
-	append table_body "<td><nobr>[join $line_event_entries ", "]</nobr></td>\n"
-	}
-
+	# Show the user's name at the end of the line
 	append table_body "<td bgcolor='$user_color_code' colspan=2><nobr><a href='[export_vars -base $user_url {user_id}]'>$user_name</a></nobr><br><nobr><a href='$office_url'></a>$user_office_name</nobr></td>\n"
 	append table_body "</tr>\n"
 	incr row_ctr
@@ -1313,6 +1399,16 @@ ad_proc im_event_cube {
     # Locations
     # ---------------------------------------------------------------
 
+    # A form with select box for filtering the locations shown
+    set location_pairs [list \
+			locations_with_events [lang::message::lookup "" intranet-events.Locations_with_events "Locations with events"] \
+			all_locations [lang::message::lookup "" intranet-events.All_locations "All Locations"] \
+			none [lang::message::lookup "" intranet-events.No_locations "No Locations"] \
+		       ]
+    set location_select [im_select -javascript "onchange=\"this.form.submit()\"" -ad_form_option_list_style_p 0 -package_key "intranet-events" report_location_selection $location_pairs ""]
+
+    set location_pass_through [export_form_vars form_mode start_date timescale report_location_selector report_resource_selector report_show_resources_p event_name event_status_id event_type_id event_creator_id start_idx order_by how_many view_name]
+    set location_form "<form name=report_location_selection action=/intranet-events/index> $location_select $location_pass_through</form>"
 
     # Row week of year
     set table_header "<tr class=rowtitle>\n"
@@ -1327,6 +1423,7 @@ ad_proc im_event_cube {
 	set date_year [lindex $day 3]
 	set date_weekday [lindex $day 4]
 	set date_week [lindex $day 5]
+	set date_day_of_week [lindex $day 6]
 
 	if {0 == $ctr} { set cell_week $date_week }
 	if {$date_week != $cell_week} {
@@ -1346,7 +1443,7 @@ ad_proc im_event_cube {
 
     # Row Date
     set table_header "<tr class=rowtitle>\n"
-    append table_header "<td class=rowtitle colspan=2>[lang::message::lookup "" intranet-events.Locations Locations]</td>\n"
+    append table_header "<td class=rowtitle colspan=2>$location_form</td>\n"
     foreach day $day_list {
 	set date_date [lindex $day 0]
 	set date_day_of_month [lindex $day 1]
@@ -1354,6 +1451,7 @@ ad_proc im_event_cube {
 	set date_year [lindex $day 3]
 	set date_weekday [lindex $day 4]
 	set date_week [lindex $day 5]
+	set date_day_of_week [lindex $day 6]
 	# append table_header "<td class=rowtitle>$date_month_of_year<br>$date_day_of_month</td>\n"
 	append table_header "<td class=rowtitle align=center><div style=\"width: ${cell_width}px\">$date_weekday $date_day_of_month $date_month_of_year</div></td>\n"
     }
@@ -1431,6 +1529,18 @@ ad_proc im_event_cube {
     # Resources
     # ---------------------------------------------------------------
 
+    # A form with select box for filtering the resources shown
+    set resource_pairs [list \
+			resources_with_events [lang::message::lookup "" intranet-events.Resources_with_events "Resources with events"] \
+			all_resources [lang::message::lookup "" intranet-events.All_resources "All Resources"] \
+			none [lang::message::lookup "" intranet-events.No_resources "No Resources"] \
+		       ]
+    set resource_select [im_select -javascript "onchange=\"this.form.submit()\"" -ad_form_option_list_style_p 0 -package_key "intranet-events" report_resource_selection $resource_pairs ""]
+
+    set resource_pass_through [export_form_vars form_mode start_date timescale report_resource_selector report_resource_selector report_show_resources_p event_name event_status_id event_type_id event_creator_id start_idx order_by how_many view_name]
+    set resource_form "<form name=report_resource_selection action=/intranet-events/index> $resource_select $resource_pass_through</form>"
+
+
     # Row week of year
     set table_header "<tr class=rowtitle>\n"
     append table_header "<td class=rowtitle colspan=2 align=right>$arrow_left_double &nbsp;&nbsp; $arrow_left </td>\n"
@@ -1444,6 +1554,7 @@ ad_proc im_event_cube {
 	set date_year [lindex $day 3]
 	set date_weekday [lindex $day 4]
 	set date_week [lindex $day 5]
+	set date_day_of_week [lindex $day 6]
 
 	if {0 == $ctr} { set cell_week $date_week }
 	if {$date_week != $cell_week} {
@@ -1462,7 +1573,7 @@ ad_proc im_event_cube {
 
     # Row Date
     set table_header "<tr class=rowtitle>\n"
-    append table_header "<td class=rowtitle colspan=2>[lang::message::lookup "" intranet-events.Resources Resources]</td>\n"
+    append table_header "<td class=rowtitle colspan=2>$resource_form</td>\n"
     foreach day $day_list {
 	set date_date [lindex $day 0]
 	set date_day_of_month [lindex $day 1]
@@ -1470,6 +1581,7 @@ ad_proc im_event_cube {
 	set date_year [lindex $day 3]
 	set date_weekday [lindex $day 4]
 	set date_week [lindex $day 5]
+	set date_day_of_week [lindex $day 6]
 	# append table_header "<td class=rowtitle>$date_month_of_year<br>$date_day_of_month</td>\n"
 	append table_header "<td class=rowtitle align=center><div style=\"width: ${cell_width}px\">$date_weekday $date_day_of_month $date_month_of_year</div></td>\n"
     }
