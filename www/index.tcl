@@ -319,7 +319,6 @@ ad_form \
     -method GET \
     -form {
 	{start_date:text(text) {label "[_ intranet-timesheet2.Start_Date]"} {html {size 10}} {after_html {<input type="button" style="height:20px; width:20px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendar('start_date', 'y-m-d');" >}}}
-
     	{timescale:text(select),optional {label "$timescale_l10n"} {options $timescale_options }}
 	{report_event_selection:text(hidden),optional}
 	{report_user_selection:text(hidden),optional}
@@ -346,19 +345,14 @@ if {$view_events_all_p} {
 
 }
 
-
-
 template::element::set_value $form_id start_date $start_date
 template::element::set_value $form_id timescale $timescale
-
 template::element::set_value $form_id event_material_id $event_material_id
 template::element::set_value $form_id event_cost_center_id $event_cost_center_id
-
 template::element::set_value $form_id report_event_selection [im_opt_val report_events_selection]
 template::element::set_value $form_id report_user_selection [im_opt_val report_users_selection]
 template::element::set_value $form_id report_location_selection [im_opt_val report_location_selection]
 template::element::set_value $form_id report_resource_selection [im_opt_val report_resource_selection]
-
 template::element::set_value $form_id report_show_event_list_p [im_opt_val report_show_event_list_p]
 
 im_dynfield::append_attributes_to_form \

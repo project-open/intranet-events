@@ -682,7 +682,8 @@ ad_proc im_event_cube {
     
     # Initialize the hash for holidays.
     set bank_holiday_color [util_memoize [list db_string holiday_color "select aux_string2 from im_categories where category_id = [im_user_absence_type_bank_holiday]"]]
-    set days_of_week_pretty [lang::message::lookup "" acs-lang.localization-abday]
+    set days_of_week_pretty "Sun Mon Tue Wed Thu Fri Sat"
+
     array set holiday_hash {}
     set day_list [list]
     for {set i 0} {$i < $report_days} {incr i} {
@@ -698,7 +699,8 @@ ad_proc im_event_cube {
 		extract(week FROM :report_start_date::date + :i::integer) AS date_week
         "
 
-	set date_day_of_week_pretty [lindex $days_of_week_pretty $date_day_of_week]
+	set date_day_of_week [lindex $days_of_week_pretty $date_day_of_week]
+	set date_day_of_week_pretty [lang::message::lookup "" intranet-events.Weekday_$date_day_of_week $date_day_of_week]
 	if {$date_weekday == "Sat" || $date_weekday == "Sun"} { set holiday_hash($date_date) $bank_holiday_color }
 	set date_month_l10n [lang::message::lookup "" intranet-events.Month_$date_month $date_month]
 	lappend day_list [list $date_date $date_day_of_month $date_month_l10n $date_year $date_day_of_week_pretty $date_week $date_day_of_week]

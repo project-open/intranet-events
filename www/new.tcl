@@ -705,15 +705,13 @@ ad_form \
     -mode $form_mode \
     -method GET \
     -form {
-    	{mine_p:text(select),optional {label "$mine_all_l10n"} {options $mine_p_options }}
 	{start_date:text(text) {label "[_ intranet-timesheet2.Start_Date]"} {html {size 10}} {after_html {<input type="button" style="height:20px; width:20px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendar('start_date', 'y-m-d');" >}}}
-
     	{timescale:text(select),optional {label "$timescale_l10n"} {options $timescale_options }}
-	{report_show_users_p:integer(checkbox),optional {label "$show_users_l10n"} {options {{"" 1}}} }
-	{report_show_locations_p:integer(checkbox),optional {label "$show_locations_l10n"} {options {{"" 1}}} }
-	{report_show_resources_p:integer(checkbox),optional {label "$show_resources_l10n"} {options {{"" 1}}} }
-	{report_show_event_list_p:integer(checkbox),optional {label "$show_event_list_l10n"} {options {{"" 1}}} }
-	{report_show_all_users_p:integer(checkbox),optional {label "$show_all_users_l10n"} {options {{"" 1}}} }
+	{report_event_selection:text(hidden),optional}
+	{report_user_selection:text(hidden),optional}
+	{report_location_selection:text(hidden),optional}
+	{report_resource_selection:text(hidden),optional}
+	{report_show_event_list_p:text(hidden),optional }
 	{event_name:text(text),optional {label "[_ intranet-core.Name]"} {html {size 12}}}
 	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options} }
 	{event_cost_center_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Cost_Center {Cost Center}]"} {options $cost_center_options} }
@@ -731,18 +729,16 @@ if {$view_events_all_p} {
 
 }
 
-template::element::set_value $form_id mine_p $mine_p
-template::element::set_value $form_id start_date [im_opt_val start_date]
+template::element::set_value $form_id start_date $start_date
 template::element::set_value $form_id timescale [im_opt_val timescale]
-
 template::element::set_value $form_id event_material_id [im_opt_val event_material_id]
 template::element::set_value $form_id event_cost_center_id [im_opt_val event_cost_center_id]
-
-template::element::set_value $form_id report_show_users_p [im_opt_val report_show_users_p]
-template::element::set_value $form_id report_show_locations_p [im_opt_val report_show_locations_p]
-template::element::set_value $form_id report_show_resources_p [im_opt_val report_show_resources_p]
+template::element::set_value $form_id report_event_selection [im_opt_val report_events_selection]
+template::element::set_value $form_id report_user_selection [im_opt_val report_users_selection]
+template::element::set_value $form_id report_location_selection [im_opt_val report_location_selection]
+template::element::set_value $form_id report_resource_selection [im_opt_val report_resource_selection]
 template::element::set_value $form_id report_show_event_list_p [im_opt_val report_show_event_list_p]
-template::element::set_value $form_id report_show_all_users_p [im_opt_val report_show_all_users_p]
+
 
 im_dynfield::append_attributes_to_form \
     -object_type $object_type \
