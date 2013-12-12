@@ -868,27 +868,7 @@ SELECT im_dynfield_widget__new (
 	null, 'im_dynfield_widget', now(), 0, '0.0.0.0', null,
 	'solidline_task_order_item', 'SolidLine Task Order Item', 'SolidLine Task Order Item',
 	10007, 'integer', 'generic_sql', 'integer',
-	'
-{custom {sql "
-select	ii.item_id,
-	c.nav_order_nr || ''/'' || coalesce(ii.sort_order::text,'''') || '' - '' ||
-		m.material_nr || '' - '' || m.material_name || 
-		'' ('' || round(ii.item_units) || '';'' || round(ii.item_units * coalesce(m.nav_planned_execution_time_hours,0)) || '')'' as name
-from	im_costs c,
-	im_invoice_items ii
-	LEFT OUTER JOIN im_materials m ON (ii.item_material_id = m.material_id)
-where	c.cost_id = ii.invoice_id and
-	c.nav_order_nr in (
-		select	main_p.nav_order_nr
-		from	im_projects main_p
-		where	main_p.project_id in (
-				select  parent_id
-				from	im_projects task_p
-				where	task_p.project_id = :task_id
-			)
-		)
-"}}
-'
+	'dummy'
 );
 
 update im_dynfield_widgets
@@ -897,7 +877,7 @@ set parameters = '
 select	ii.item_id,
 	c.nav_order_nr || ''/'' || coalesce(ii.sort_order::text,'''') || '' - '' ||
 		m.material_nr || '' - '' || m.material_name || 
-		'' ('' || round(ii.item_units) || '';'' || round(ii.item_units * coalesce(m.nav_planned_execution_time_hours,0)) || '')'' as name
+		'' ('' || to_char(ii.item_units, ''990.999'') || '';'' || to_char(ii.item_units * coalesce(m.nav_planned_execution_time_hours,0), ''990.999'') || '')'' as name
 from	im_costs c,
 	im_invoice_items ii
 	LEFT OUTER JOIN im_materials m ON (ii.item_material_id = m.material_id)
