@@ -598,6 +598,10 @@ ad_proc im_event_cube {
     set name_order [parameter::get -package_id [apm_package_id_from_key intranet-core] -parameter "NameOrder" -default 1]
     set cell_width [parameter::get -package_id [apm_package_id_from_key intranet-events] -parameter "EventCubeCellWidth" -default 50]
 
+    # Show left dimension entry (user, location or resource)
+    # every few weeks in the Saturday + Sunday columns
+    set show_kw_every_n_weeks 5
+
     if {-1 == $event_type_id} { set event_type_id "" }
     set report_start_date_julian [im_date_ansi_to_julian $report_start_date]
     set report_end_date_julian [im_date_ansi_to_julian $report_end_date]
@@ -699,8 +703,8 @@ ad_proc im_event_cube {
 		extract(week FROM :report_start_date::date + :i::integer) AS date_week
         "
 
-	set date_day_of_week [lindex $days_of_week_pretty $date_day_of_week]
-	set date_day_of_week_pretty [lang::message::lookup "" intranet-events.Weekday_$date_day_of_week $date_day_of_week]
+	set date_day_of_week_notrans [lindex $days_of_week_pretty $date_day_of_week]
+	set date_day_of_week_pretty [lang::message::lookup "" intranet-events.Weekday_$date_day_of_week_notrans $date_day_of_week_notrans]
 	if {$date_weekday == "Sat" || $date_weekday == "Sun"} { set holiday_hash($date_date) $bank_holiday_color }
 	set date_month_l10n [lang::message::lookup "" intranet-events.Month_$date_month $date_month]
 	lappend day_list [list $date_date $date_day_of_month $date_month_l10n $date_year $date_day_of_week_pretty $date_week $date_day_of_week]
@@ -1388,7 +1392,6 @@ ad_proc im_event_cube {
 
 	    set key "$user_id-$date_date"
 	    set value [list]
-
 	    if {[info exists absence_hash($key)]} { set value [concat $value $absence_hash($key)] }
 	    if {[info exists holiday_hash($date_date)]} { set value [concat $value $holiday_hash($date_date)] }
 
@@ -1418,10 +1421,8 @@ ad_proc im_event_cube {
 		}
 	    }
 	    
-	    # Shows date and consultant every N weeks
-	    # Add the user name every Nth Saturday
-	    # and the date + KW every Nth sunday
-	    set show_kw_every_n_weeks 5
+	    # Shows date and consultant every N weeks. Add the user name 
+	    # every Nth Saturday and the date + KW every Nth sunday
 	    if {0 == $date_day_of_week} { incr week_ctr }
 	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
 		if {0 == $date_day_of_week} {
@@ -1546,8 +1547,16 @@ ad_proc im_event_cube {
             ]
 	}
 
+	set week_ctr 1
 	foreach day $day_list {
 	    set date_date [lindex $day 0]
+	    set date_day_of_month [lindex $day 1]
+	    set date_month_of_year [lindex $day 2]
+	    set date_year [lindex $day 3]
+	    set date_weekday [lindex $day 4]
+	    set date_week [lindex $day 5]
+	    set date_day_of_week [lindex $day 6]
+
 	    set key "$location_id-$date_date"
 	    set value ""
 	    if {[info exists holiday_hash($date_date)]} { append value $holiday_hash($date_date) }
@@ -1569,6 +1578,24 @@ ad_proc im_event_cube {
                     ]
 		}
 	    }
+
+
+	    # Shows date and consultant every N weeks. Add the user name 
+	    # every Nth Saturday and the date + KW every Nth sunday
+	    if {0 == $date_day_of_week} { incr week_ctr }
+	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
+		if {0 == $date_day_of_week} {
+		    # Sunday - Add the date
+		    append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+		}
+	    }
+	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
+		if {6 == $date_day_of_week} { 
+		    # Saturday - Add the sconsultant
+		    append event_html "<nobr><a href='[export_vars -base $location_url {location_id}]'>$location_nr ($location_seats)</a></nobr>"
+		}
+	    }
+
 	    
 	    append table_body [im_event_cube_render_cell -value $value -event_html $event_html]
 	}
@@ -1676,10 +1703,19 @@ ad_proc im_event_cube {
 	    }
 	}
 
+	set week_ctr 1
 	foreach day $day_list {
 	    set date_date [lindex $day 0]
+	    set date_day_of_month [lindex $day 1]
+	    set date_month_of_year [lindex $day 2]
+	    set date_year [lindex $day 3]
+	    set date_weekday [lindex $day 4]
+	    set date_week [lindex $day 5]
+	    set date_day_of_week [lindex $day 6]
+
 	    set key "$resource_id-$date_date"
 	    set value ""
+            if {[info exists holiday_hash($date_date)]} { set value [concat $value $holiday_hash($date_date)] }
 
 	    set event_html ""
 	    append event_html $before_events_html
@@ -1698,6 +1734,23 @@ ad_proc im_event_cube {
                     ]
 		}
 	    }
+
+	    # Shows date and consultant every N weeks. Add the user name 
+	    # every Nth Saturday and the date + KW every Nth sunday
+	    if {0 == $date_day_of_week} { incr week_ctr }
+	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
+		if {0 == $date_day_of_week} {
+		    # Sunday - Add the date
+		    append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+		}
+	    }
+	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
+		if {6 == $date_day_of_week} { 
+		    # Saturday - Add the sconsultant
+		    append event_html "<nobr><a href='[export_vars -base $resource_url {{conf_item_id $resource_id} {form_mode display}}]' title='$resource_note'>$resource_name</a></nobr></td>\n"
+		}
+	    }
+
 	    
 	    append table_body [im_event_cube_render_cell -value $value -event_html $event_html]
 	}
