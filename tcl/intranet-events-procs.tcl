@@ -570,6 +570,7 @@ ad_proc -public im_event_navbar {
 
 
 ad_proc im_event_cube {
+    {-param_hash_values "" }
     {-event_status_id "" }
     {-event_type_id "" }
     {-event_material_id "" }
@@ -602,12 +603,23 @@ ad_proc im_event_cube {
     set report_end_date_julian [im_date_ansi_to_julian $report_end_date]
     set report_days [expr $report_end_date_julian - $report_start_date_julian]
 
+    # Deal with parameters from index.tcl page
+    array set param_hash $param_hash_values
+    set pass_through_vars [list]
+    foreach var [array names param_hash] {
+	lappend pass_through_vars $var
+	set $var $param_hash($var)
+    }
+    
+
     # ---------------------------------------------------------------
     # Limit the number of users and days
     # ---------------------------------------------------------------
 
     set event_criteria [list]
-    set resource_criteria [list]
+    lappend event_criteria "e.event_start_date <= :report_end_date::date"
+    lappend event_criteria "e.event_end_date >= :report_start_date::date"
+
     if {"" != $event_type_id && 0 != $event_type_id} {
 	lappend event_criteria "e.event_type_id = '$event_type_id'"
     }
@@ -692,8 +704,9 @@ ad_proc im_event_cube {
 	lappend day_list [list $date_date $date_day_of_month $date_month_l10n $date_year $date_day_of_week_pretty $date_week $date_day_of_week]
     }
 
+
     # ---------------------------------------------------------------
-    # Determine Left Dimension
+    # Determine the User left dimension
     # ---------------------------------------------------------------
 
     set user_criteria [list]
@@ -714,6 +727,7 @@ ad_proc im_event_cube {
 				im_events e
 			where	r.object_id_one = e.event_id and
 				r.object_id_two = u.user_id
+				$event_where_clause
 	    )"
 	}
 	all_consultants {
@@ -730,6 +744,7 @@ ad_proc im_event_cube {
 				im_events e
 			where	r.object_id_one = e.event_id and
 				r.object_id_two = u.user_id
+				$event_where_clause
 	    )"
 	}
 	all_employees {
@@ -743,14 +758,13 @@ ad_proc im_event_cube {
 	}
     }
 
-
     set user_where_clause [join $user_criteria " and\n            "]
     if {![empty_string_p $user_where_clause]} {
 	set user_where_clause " and $user_where_clause"
     }
 
     # Select the list of users to be shown as left dimensions
-    set user_list [db_list_of_lists user_list "
+    set user_list_sql "
 		select	user_id,
 			user_name,
 			department,
@@ -768,13 +782,9 @@ ad_proc im_event_cube {
 						r.object_id_two = u.user_id
 				) as employee_office_id
 			from	users u
-				LEFT OUTER JOIN im_employees emp ON u.user_id = emp.employee_id,
-				acs_rels r,
-				im_events e
-			where	r.object_id_one = e.event_id and
-				r.object_id_two = u.user_id and
-				u.user_id not in (
-					-- exclude deleted memberships 
+				LEFT OUTER JOIN im_employees emp ON u.user_id = emp.employee_id
+			where	u.user_id not in (
+					-- exclude deleted users
 					select	u.user_id
 					from	users u,
 						acs_rels r,
@@ -787,10 +797,38 @@ ad_proc im_event_cube {
 				$user_where_clause
 			) t
 		order by office_path, user_name
-    "]
+    "
+    set user_list [db_list_of_lists user_list $user_list_sql]
 
+    # ---------------------------------------------------------------
+    # Determine the Location left dimension
+    # ---------------------------------------------------------------
 
     set location_criteria [list]
+    switch $report_location_selection {
+	"" - locations_with_events {
+	    lappend location_criteria "ci.conf_item_id in (
+			select	e.event_location_id
+			from	im_events e
+			where	1 = 1
+				$event_where_clause
+	    )"
+	}
+	all_locations {
+	    # Nothing - just the entire list of locations
+	}
+	none {
+	    lappend location_criteria "ci.conf_item_id in (select 0 from dual)"
+	}
+	default  {
+	    ad_return_complaint 1 "im_event_cube: Found unknown report_location_select=$report_location_selection"
+	}
+    }
+
+    set location_where_clause [join $location_criteria " and\n            "]
+    if {![empty_string_p $location_where_clause]} {
+	set location_where_clause " and $location_where_clause"
+    }
 
     set location_list [db_list_of_lists location_list "
 		select distinct
@@ -799,35 +837,55 @@ ad_proc im_event_cube {
 			ci.conf_item_nr as location_nr,
 			ci.room_number_seats as location_number_seats,
 			coalesce(ci.description, '') || ' ' || coalesce(ci.note, '') as location_note
-		from	im_events e
-			LEFT OUTER JOIN im_conf_items ci ON (e.event_location_id = ci.conf_item_id)
-		where	e.event_location_id = ci.conf_item_id and
-			ci.conf_item_name is not null and
+		from	im_conf_items ci
+		where	ci.conf_item_name is not null and
+			ci.conf_item_type_id in (81500) and	-- only Room CIs
 			ci.conf_item_status_id not in ([im_conf_item_status_deleted])
+			$location_where_clause
 		order by ci.conf_item_name
     "]
 
-#			(
-#				e.event_start_date <= :report_end_date::date and
-#				e.event_end_date >= :report_start_date::date
-#			OR	1 = :report_show_all_locations_p
-#			)
+    # ---------------------------------------------------------------
+    # Determine the Resource left dimension
+    # ---------------------------------------------------------------
 
 
+    set resource_criteria [list]
+    switch $report_resource_selection {
+	"" - resources_with_events {
+	    lappend resource_criteria "ci.conf_item_id in (
+			select	r.object_id_two
+			from	im_events e,
+				acs_rels r
+			where	r.object_id_one = e.event_id
+				$event_where_clause
+	    )"
+	}
+	all_resources {
+	    # Nothing - just the entire list of resources
+	}
+	none {
+	    lappend resource_criteria "ci.conf_item_id in (select 0 from dual)"
+	}
+	default  {
+	    ad_return_complaint 1 "im_event_cube: Found unknown report_resource_select=$report_resource_selection"
+	}
+    }
+
+    set resource_where_clause [join $resource_criteria " and\n            "]
+    if {![empty_string_p $resource_where_clause]} {
+	set resource_where_clause " and $resource_where_clause"
+    }
 
     set resource_list [db_list_of_lists resource_list "
 		select distinct
 			ci.conf_item_id,
 			ci.conf_item_name as resource_name,
 			coalesce(ci.description, '') || ' ' || coalesce(ci.note, '') as resource_note
-		from	im_events e,
-			acs_rels r,
-			im_conf_items ci
-		where	r.object_id_one = e.event_id and
-			r.object_id_two = ci.conf_item_id and
- 			e.event_start_date <= :report_end_date::date and
-			e.event_end_date >= :report_start_date::date and
-			ci.conf_item_status_id not in ([im_conf_item_status_deleted])
+		from	im_conf_items ci
+		where	ci.conf_item_status_id not in ([im_conf_item_status_deleted]) and
+			ci.conf_item_type_id not in (81500)	-- exclude Room CIs
+			$resource_where_clause
 		order by ci.conf_item_name
      "]
 
@@ -863,9 +921,7 @@ ad_proc im_event_cube {
 		LEFT OUTER JOIN im_cost_centers cc ON (e.event_cost_center_id = cc.cost_center_id)
 		LEFT OUTER JOIN acs_rels r ON (r.object_id_one = e.event_id)
 		LEFT OUTER JOIN users u ON (r.object_id_two = u.user_id)
-	where	o.object_id = e.event_id and
-		e.event_start_date <= :report_end_date::date and
-		e.event_end_date >= :report_start_date::date
+	where	o.object_id = e.event_id
 		$event_where_clause
     "
 
@@ -1062,11 +1118,8 @@ ad_proc im_event_cube {
 		d.d
 	from	im_user_absences a,
 		users u,
-		(select im_day_enumerator as d from im_day_enumerator(:report_start_date, :report_end_date)) d,
-		cc_users cc
+		(select im_day_enumerator as d from im_day_enumerator(:report_start_date, :report_end_date)) d
 	where	a.owner_id = u.user_id and
-		cc.user_id = u.user_id and 
-		cc.member_state = 'approved' and
 		a.start_date <= :report_end_date::date and
 		a.end_date >= :report_start_date::date and
                 date_trunc('day',d.d) between date_trunc('day',a.start_date) and date_trunc('day',a.end_date)
@@ -1254,10 +1307,10 @@ ad_proc im_event_cube {
 			all_employees [lang::message::lookup "" intranet-events.All_employees "All Employees"] \
 			none [lang::message::lookup "" intranet-events.No_users "No Users"] \
 		       ]
-    # mine [lang::message::lookup "" intranet-events.Mine "Mine"] \
-
     set user_select [im_select -javascript "onchange=\"this.form.submit()\"" -ad_form_option_list_style_p 0 -package_key "intranet-events" report_user_selection $user_pairs ""]
-    set user_pass_through [export_form_vars form_mode start_date timescale report_location_selector report_resource_selector report_show_resources_p event_name event_status_id event_type_id event_creator_id start_idx order_by how_many view_name]
+    # Restore the original parameters from the index.tcl query
+    foreach var $pass_through_vars { set $var $param_hash($var) }
+    set user_pass_through [export_vars -form -exclude report_user_selection $pass_through_vars]
     set user_form "<form name=report_user_selection action=/intranet-events/index> $user_select $user_pass_through</form>"
 
 
@@ -1406,8 +1459,8 @@ ad_proc im_event_cube {
 			none [lang::message::lookup "" intranet-events.No_locations "No Locations"] \
 		       ]
     set location_select [im_select -javascript "onchange=\"this.form.submit()\"" -ad_form_option_list_style_p 0 -package_key "intranet-events" report_location_selection $location_pairs ""]
-
-    set location_pass_through [export_form_vars form_mode start_date timescale report_location_selector report_resource_selector report_show_resources_p event_name event_status_id event_type_id event_creator_id start_idx order_by how_many view_name]
+    foreach var $pass_through_vars { set $var $param_hash($var) }
+    set location_pass_through [export_vars -form -exclude report_location_selection $pass_through_vars]
     set location_form "<form name=report_location_selection action=/intranet-events/index> $location_select $location_pass_through</form>"
 
     # Row week of year
@@ -1536,8 +1589,8 @@ ad_proc im_event_cube {
 			none [lang::message::lookup "" intranet-events.No_resources "No Resources"] \
 		       ]
     set resource_select [im_select -javascript "onchange=\"this.form.submit()\"" -ad_form_option_list_style_p 0 -package_key "intranet-events" report_resource_selection $resource_pairs ""]
-
-    set resource_pass_through [export_form_vars form_mode start_date timescale report_resource_selector report_resource_selector report_show_resources_p event_name event_status_id event_type_id event_creator_id start_idx order_by how_many view_name]
+    foreach var $pass_through_vars { set $var $param_hash($var) }
+    set resource_pass_through [export_vars -form -exclude report_resource_selection $pass_through_vars]
     set resource_form "<form name=report_resource_selection action=/intranet-events/index> $resource_select $resource_pass_through</form>"
 
 

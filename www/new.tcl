@@ -21,7 +21,7 @@ if {![info exists task]} {
     } {
 	event_id:integer,optional
 	{ event_name "" }
-	{ event_nr "[lang::message::lookup {} intranet-events.event_nr_prefix event]_[im_event::next_event_nr]" }
+	{ event_nr "[im_event::next_event_nr]" }
 	{ event_sla_id "" }
 	{ event_customer_contact_id "" }
 	{ task_id "" }
@@ -407,14 +407,15 @@ ad_form -extend -name event -on_request {
     # Logic for automatically calculating an event_name
     if {"" == $event_name} {
 	set start_date $event_start_date
-	if {[regexp {^([0-9]{4}) ([0-9]{2}) ([0-9]{2})} $event_start_date match year month day]} { set start_date "$year-$month-$day" }
+	if {[regexp {^([0-9]{4}) ([0-9]{1,2}) ([0-9]{1,2})} $event_start_date match year month day]} { set start_date "$year-$month-$day" }
 
 	set end_date $event_end_date
-	if {[regexp {^([0-9]{4}) ([0-9]{2}) ([0-9]{2})} $event_end_date match year month day]} { set end_date "$year-$month-$day" }
+	if {[regexp {^([0-9]{4}) ([0-9]{1,2}) ([0-9]{1,2})} $event_end_date match year month day]} { set end_date "$year-$month-$day" }
 
 	set material_name [acs_object_name $event_material_id]
 	set location_name [acs_object_name $event_location_id]
-	set event_name "$material_name; $location_name; $start_date; $end_date; $event_nr"
+	set event_l10n [lang::message::lookup {} intranet-events.Event_nr_prefix Event]
+	set event_name "$material_name; $location_name; $start_date; $end_date; $event_l10n $event_nr"
 	# Event 35; SolidWorks Erweiterte Bauteilmodellierung; SolidLine Ludwigsburg; 2014-03-03; 2014-03-04
     }
 

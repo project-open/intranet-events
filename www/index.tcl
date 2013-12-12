@@ -71,6 +71,13 @@ if {[catch {
     [lang::message::lookup "" intranet-events.Invalid_Date_Format_Message "Please enter the Start Date in format 'YYYY-MM-DD'"]"
 }
 
+# Capture the filter parameters for pass-through later
+set pass_through_vars [list order_by start_date event_name event_status_id event_type_id event_material_id event_cost_center_id event_location_id event_creator_id customer_id customer_contact_id letter start_idx how_many view_name timescale report_event_selection report_user_selection report_location_selection report_resource_selection report_show_event_list_p]
+foreach param $pass_through_vars {
+    set param_hash($param) [expr "\$$param"]
+}
+
+
 # Unprivileged users can only see their own events
 set view_events_all_p [im_permission $current_user_id "view_events_all"]
 if {!$view_events_all_p} {
@@ -735,6 +742,7 @@ if {!$view_events_all_p} { set table_submit_html "" }
 # ---------------------------------------------------------------
 
 set event_cube_html [im_event_cube \
+			 -param_hash_values [array get param_hash] \
 			 -event_status_id $event_status_id_org \
 			 -event_type_id $event_type_id_org \
 			 -event_material_id $event_material_id_org \
