@@ -49,7 +49,9 @@ set participant_options [db_list_of_lists participant_options "
 			where	r.rel_id = bom.rel_id and
 				r.object_id_two = u.user_id and
 				r.object_id_one = :event_id
-		)
+		) and
+		c.company_path != 'internal' and
+		u.user_id not in (select member_id from group_distinct_member_map where group_id = [im_profile_employees])
 	order by
 		c.company_name, pe.first_names, pe.last_name
 "]
