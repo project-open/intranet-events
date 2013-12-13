@@ -910,7 +910,6 @@ ad_proc im_event_cube {
 		(e.event_end_date::date - e.event_start_date::date + 1) as event_duration,
 		im_biz_object_member__list(e.event_id) as event_members,
 		CASE WHEN e.event_start_date < :report_start_date THEN 1 ELSE 0 END as event_starts_before_report_p,
-		im_material_nr_from_id(e.event_material_id) as event_material_nr,
 		cc.cost_center_label as event_cost_center_code,
 		(select count(*) from acs_rels qr, im_biz_object_members qbom 
 		 where qr.rel_id = qbom.rel_id and qbom.member_status_id = 82200 and
@@ -921,18 +920,17 @@ ad_proc im_event_cube {
 		 where qr.rel_id = qbom.rel_id and qbom.member_status_id = 82210 and
 		 qr.object_id_one = e.event_id and
 		 qr.object_id_two in (select member_id from group_distinct_member_map where group_id = 461)
-		) as event_reserved_seats
+		) as event_reserved_seats,
+		coalesce(m.abbreviation, m.material_nr) as event_material_nr
 	from	acs_objects o,
 		im_events e
 		LEFT OUTER JOIN im_cost_centers cc ON (e.event_cost_center_id = cc.cost_center_id)
+		LEFT OUTER JOIN im_materials m ON (e.event_material_id = m.material_id)
 		LEFT OUTER JOIN acs_rels r ON (r.object_id_one = e.event_id)
 		LEFT OUTER JOIN users u ON (r.object_id_two = u.user_id)
 	where	o.object_id = e.event_id
 		$event_where_clause
     "
-
-# ad_return_complaint 1 $event_where_clause
-
     array set user_event_hash {}
     array set location_event_hash {}
     db_foreach events $event_sql {
@@ -988,8 +986,6 @@ ad_proc im_event_cube {
 	    " -default ""] 3600]
 	    lappend event_members_customers $customer
 	}
-
-#	ad_return_complaint 1 "event_members: $event_members<br>event_customers: $event_members_customers<br>event_members_pretty: $event_members_pretty"
 
 	set event_start_hash($key) $event_id
 	set event_info_hash($event_id) [list \
