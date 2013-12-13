@@ -1424,20 +1424,21 @@ ad_proc im_event_cube {
 	    # Shows date and consultant every N weeks. Add the user name 
 	    # every Nth Saturday and the date + KW every Nth sunday
 	    if {0 == $date_day_of_week} { incr week_ctr }
-	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
-		if {0 == $date_day_of_week} {
-		    # Sunday - Add the date
-		    append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+	    if {"" == $event_html} {
+		if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
+		    if {0 == $date_day_of_week} {
+			# Sunday - Add the date
+			append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+		    }
+		}
+		
+		if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
+		    if {6 == $date_day_of_week} { 
+			# Saturday - Add the sconsultant
+			append event_html "<nobr><a href='[export_vars -base $user_url {user_id}]'>$user_name</a></nobr><br><nobr><a href='$office_url'></a>$user_office_name"
+		    }
 		}
 	    }
-
-	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
-		if {6 == $date_day_of_week} { 
-		    # Saturday - Add the sconsultant
-		    append event_html "<nobr><a href='[export_vars -base $user_url {user_id}]'>$user_name</a></nobr><br><nobr><a href='$office_url'></a>$user_office_name"
-		}
-	    }
-
 
 	    append table_body [im_event_cube_render_cell -value $value -event_html $event_html]
 	    ns_log NOTICE "intranet-events-procs::im_event_cube_render_cell: $value"
@@ -1565,6 +1566,7 @@ ad_proc im_event_cube {
 	    append event_html $before_events_html
 	    set before_events_html ""
 
+
 	    if {[info exists location_event_hash($key)]} { 
 		set events $location_event_hash($key)
 		foreach eid $events {
@@ -1580,21 +1582,25 @@ ad_proc im_event_cube {
 	    }
 
 
+
 	    # Shows date and consultant every N weeks. Add the user name 
 	    # every Nth Saturday and the date + KW every Nth sunday
 	    if {0 == $date_day_of_week} { incr week_ctr }
-	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
-		if {0 == $date_day_of_week} {
-		    # Sunday - Add the date
-		    append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+	    if {"" == $event_html} {
+		if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
+		    if {0 == $date_day_of_week} {
+			# Sunday - Add the date
+			append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+		    }
+		}
+		if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
+		    if {6 == $date_day_of_week} { 
+			# Saturday - Add the sconsultant
+			append event_html "<nobr><a href='[export_vars -base $location_url {location_id}]'>$location_nr ($location_seats)</a></nobr>"
+		    }
 		}
 	    }
-	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
-		if {6 == $date_day_of_week} { 
-		    # Saturday - Add the sconsultant
-		    append event_html "<nobr><a href='[export_vars -base $location_url {location_id}]'>$location_nr ($location_seats)</a></nobr>"
-		}
-	    }
+
 
 	    
 	    append table_body [im_event_cube_render_cell -value $value -event_html $event_html]
@@ -1738,19 +1744,20 @@ ad_proc im_event_cube {
 	    # Shows date and consultant every N weeks. Add the user name 
 	    # every Nth Saturday and the date + KW every Nth sunday
 	    if {0 == $date_day_of_week} { incr week_ctr }
-	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
-		if {0 == $date_day_of_week} {
-		    # Sunday - Add the date
-		    append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+	    if {"" == $event_html} {
+		if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
+		    if {0 == $date_day_of_week} {
+			# Sunday - Add the date
+			append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+		    }
+		}
+		if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
+		    if {6 == $date_day_of_week} { 
+			# Saturday - Add the sconsultant
+			append event_html "<nobr><a href='[export_vars -base $resource_url {{conf_item_id $resource_id} {form_mode display}}]' title='$resource_note'>$resource_name</a></nobr></td>\n"
+		    }
 		}
 	    }
-	    if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
-		if {6 == $date_day_of_week} { 
-		    # Saturday - Add the sconsultant
-		    append event_html "<nobr><a href='[export_vars -base $resource_url {{conf_item_id $resource_id} {form_mode display}}]' title='$resource_note'>$resource_name</a></nobr></td>\n"
-		}
-	    }
-
 	    
 	    append table_body [im_event_cube_render_cell -value $value -event_html $event_html]
 	}
