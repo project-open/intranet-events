@@ -347,9 +347,7 @@ if {[info exists event_id]} {
     lappend event_elements {event_consultant_abbreviation:text(text),optional {label "[lang::message::lookup {} intranet-events.Consultant_Abbreviations {Consultant Abbreviation}]"}  }
     lappend event_elements {event_location_abbreviation:text(text),optional {label "[lang::message::lookup {} intranet-events.Location_Abbreviations {Location Abbreviation}]"}  }
     lappend event_elements {event_resource_abbreviation:text(text),optional {label "[lang::message::lookup {} intranet-events.Resource_Abbreviations {Resource Abbreviation}]"}  }
-
     lappend event_elements {event_name:text(text),optional {label $event_name_label} {html {size 80}}}
-
 } else {
     lappend event_elements {event_name:text(hidden),optional}
 }
@@ -405,7 +403,7 @@ ad_form -extend -name event -on_request {
     set event_end_date_sql [template::util::date get_property sql_date $event_end_date]
 
     # Logic for automatically calculating an event_name
-    if {"" == $event_name} {
+    if {"" == [string trim $event_name]} {
 	set start_date $event_start_date
 	if {[regexp {^([0-9]{4}) ([0-9]{1,2}) ([0-9]{1,2})} $event_start_date match year month day]} { set start_date "$year-$month-$day" }
 
@@ -414,8 +412,7 @@ ad_form -extend -name event -on_request {
 
 	set material_name [acs_object_name $event_material_id]
 	set location_name [acs_object_name $event_location_id]
-	set event_l10n [lang::message::lookup {} intranet-events.Event_nr_prefix Event]
-	set event_name "$material_name; $location_name; $start_date; $end_date; $event_l10n $event_nr"
+	set event_name "$material_name; $location_name; $start_date; $end_date; $event_nr"
 	# Event 35; SolidWorks Erweiterte Bauteilmodellierung; SolidLine Ludwigsburg; 2014-03-03; 2014-03-04
     }
 
@@ -456,10 +453,24 @@ ad_form -extend -name event -on_request {
     ad_script_abort
 
 } -edit_data {
-
     ns_log Notice "new: edit_data"
+
     set event_start_date_sql [template::util::date get_property sql_date $event_start_date]
     set event_end_date_sql [template::util::date get_property sql_date $event_end_date]
+
+    # Logic for automatically calculating an event_name
+    if {"" == [string trim $event_name]} {
+	set start_date $event_start_date
+	if {[regexp {^([0-9]{4}) ([0-9]{1,2}) ([0-9]{1,2})} $event_start_date match year month day]} { set start_date "$year-$month-$day" }
+
+	set end_date $event_end_date
+	if {[regexp {^([0-9]{4}) ([0-9]{1,2}) ([0-9]{1,2})} $event_end_date match year month day]} { set end_date "$year-$month-$day" }
+
+	set material_name [acs_object_name $event_material_id]
+	set location_name [acs_object_name $event_location_id]
+	set event_name "$material_name; $location_name; $start_date; $end_date; $event_nr"
+	# Event 35; SolidWorks Erweiterte Bauteilmodellierung; SolidLine Ludwigsburg; 2014-03-03; 2014-03-04
+    }
 
     db_dml event_update {}
     db_dml event_update_acs_object {}
@@ -711,7 +722,7 @@ ad_form \
 	{report_user_selection:text(hidden),optional}
 	{report_location_selection:text(hidden),optional}
 	{report_resource_selection:text(hidden),optional}
-	{report_show_event_list_p:text(hidden),optional }
+	{report_show_event_list_p:integer(checkbox),optional {label "$show_event_list_l10n"} {options {{"" 1}}} }
 	{event_name:text(text),optional {label "[_ intranet-core.Name]"} {html {size 12}}}
 	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options} }
 	{event_cost_center_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Cost_Center {Cost Center}]"} {options $cost_center_options} }

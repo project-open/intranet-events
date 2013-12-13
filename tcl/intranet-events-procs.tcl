@@ -600,7 +600,7 @@ ad_proc im_event_cube {
 
     # Show left dimension entry (user, location or resource)
     # every few weeks in the Saturday + Sunday columns
-    set show_kw_every_n_weeks 5
+    set show_kw_every_n_weeks 4
 
     if {-1 == $event_type_id} { set event_type_id "" }
     set report_start_date_julian [im_date_ansi_to_julian $report_start_date]
@@ -1428,7 +1428,7 @@ ad_proc im_event_cube {
 		if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
 		    if {0 == $date_day_of_week} {
 			# Sunday - Add the date
-			append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+			append event_html "KW $date_week<br>$date_day_of_month. $date_month_of_year"
 		    }
 		}
 		
@@ -1590,7 +1590,7 @@ ad_proc im_event_cube {
 		if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
 		    if {0 == $date_day_of_week} {
 			# Sunday - Add the date
-			append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+			append event_html "KW $date_week<br>$date_day_of_month. $date_month_of_year"		    
 		    }
 		}
 		if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
@@ -1748,7 +1748,7 @@ ad_proc im_event_cube {
 		if {[expr $week_ctr % $show_kw_every_n_weeks] == 1} {
 		    if {0 == $date_day_of_week} {
 			# Sunday - Add the date
-			append event_html "KW $date_week<br>$date_weekday $date_day_of_month"		    
+			append event_html "KW $date_week<br>$date_day_of_month. $date_month_of_year"
 		    }
 		}
 		if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {

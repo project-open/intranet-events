@@ -30,7 +30,7 @@ ad_page_contract {
     { report_user_selection ""}
     { report_location_selection ""}
     { report_resource_selection ""}
-    { report_show_event_list_p "1"}
+    { report_show_event_list_p ""}
 }
 
 # ---------------------------------------------------------------
@@ -324,14 +324,13 @@ ad_form \
 	{report_user_selection:text(hidden),optional}
 	{report_location_selection:text(hidden),optional}
 	{report_resource_selection:text(hidden),optional}
-	{report_show_event_list_p:text(hidden),optional }
+	{report_show_event_list_p:integer(checkbox),optional {label "$show_event_list_l10n"} {options {{"" 1}}} }
 	{event_name:text(text),optional {label "[_ intranet-core.Name]"} {html {size 12}}}
 	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options} }
 	{event_cost_center_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Cost_Center {Cost Center}]"} {options $cost_center_options} }
 	{event_status_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Status Status]"} {custom {category_type "Intranet Event Status" translate_p 1 package_key "intranet-core"}} }
     }
 
-#	{report_show_event_list_p:integer(checkbox),optional {label "$show_event_list_l10n"} {options {{"" 1}}} }
 
 
 if {$view_events_all_p} {  
