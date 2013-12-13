@@ -904,7 +904,62 @@ ad_proc im_event_cube {
 			ci.conf_item_type_id not in (81500)	-- exclude Room CIs
 			$resource_where_clause
 		order by ci.conf_item_name
-     "]
+    "]
+
+    # Get the list of resources per event
+    set resource_conflict_checker_sql "
+	select	e.event_id,
+		to_char(e.event_start_date, 'J') as start_j,
+		e.event_end_date::date as end_d,
+		(e.event_end_date::date - e.event_start_date::date + 1) as event_duration,
+		ci.conf_item_id as resource_id
+	from	im_events e,
+		acs_rels r,
+		im_conf_items ci
+	where	r.object_id_two = ci.conf_item_id and
+                r.object_id_one = e.event_id
+		$event_where_clause
+    "
+    db_foreach resource_conflict_checker $resource_conflict_checker_sql {
+	for {set event_j $start_j} {$event_j < [expr $start_j + $event_duration]} { incr event_j } {
+	    set event_ansi [im_date_julian_to_ansi $event_j]
+	    set key "$resource_id-$event_ansi"
+	    set events {}
+	    if {[info exists collision_checker_hash($key)]} { set events $collision_checker_hash($key) }
+	    lappend events $event_id
+	    set events [lsort -unique $events]
+	    set collision_checker_hash($key) $events
+	}
+    }
+
+
+    # ---------------------------------------------------------------
+    # Event status for customers per event
+    # ---------------------------------------------------------------
+    
+    set participant_event_status_sql "
+	select	e.event_id,
+		u.user_id,
+		bom.member_status_id
+	from	acs_objects o,
+		im_events e,
+		acs_rels r,
+		im_biz_object_members bom,
+		users u
+	where	e.event_id = o.object_id and
+		r.object_id_one = e.event_id and
+		r.object_id_two = u.user_id and
+		r.rel_id = bom.rel_id
+    "
+    # Create a list of (user -> status) tuples per event
+    # that describes the member status of the participants
+    db_foreach participant_event_status $participant_event_status_sql {
+	set states [list]
+	if {[info exists event_participant_status_hash($event_id)]} { set states $event_participant_status_hash($event_id) }
+	lappend states $user_id
+	lappend states $member_status_id
+	set event_participant_status_hash($event_id) $states
+    }
 
     # ---------------------------------------------------------------
     # Events per user
@@ -998,6 +1053,11 @@ ad_proc im_event_cube {
 	    lappend event_members_customers $customer
 	}
 
+	set event_participant_states ""
+	if {[info exists event_participant_status_hash($event_id)]} {
+	    set event_participant_states $event_participant_status_hash($event_id)
+	}
+
 	set event_start_hash($key) $event_id
 	set event_info_hash($event_id) [list \
 					    event_id $event_id \
@@ -1015,6 +1075,7 @@ ad_proc im_event_cube {
 					    event_members_pretty $event_members_pretty \
 					    event_members_customers $event_members_customers \
 					    event_members_types $event_members_types \
+					    event_participant_states $event_participant_states \
 					    event_material_nr $event_material_nr \
 					    event_cost_center_code $event_cost_center_code \
 					    event_booked_seats $event_booked_seats \
@@ -1233,6 +1294,34 @@ ad_proc im_event_cube {
 		foreach eid $event_ids {
 		    set location_event_key "$location_id-$eid"
 		    set conflict_hash($location_event_key) 1
+		}
+
+	    }
+	}
+    }
+
+
+    # Resources
+    foreach resource_tuple $resource_list {
+        set resource_id [lindex $resource_tuple 0]
+        set resource_name [lindex $resource_tuple 1]
+        set resource_note [lindex $resource_tuple 2]
+
+	foreach day $day_list {
+	    set date_date [lindex $day 0]
+
+	    # Conflict Checker for Resources
+	    set key "$resource_id-$date_date"
+	    set event_ids {}
+	    if {[info exists collision_checker_hash($key)]} { 
+		set event_ids $collision_checker_hash($key) 
+	    }
+
+	    # Two events => conflict
+	    if {[llength $event_ids] > 1} { 
+		foreach eid $event_ids {
+		    set resource_event_key "$resource_id-$eid"
+		    set conflict_hash($resource_event_key) 1
 		}
 
 	    }
@@ -1805,6 +1894,7 @@ ad_proc im_event_cube_render_event {
     set event_members_pretty $event_local_info(event_members_pretty)
     set event_members_customers $event_local_info(event_members_customers)
     set event_members_types $event_local_info(event_members_types)
+    set event_participant_states $event_local_info(event_participant_states)
     set event_material_nr $event_local_info(event_material_nr)
     set event_cost_center_code $event_local_info(event_cost_center_code)
     set event_booked_seats $event_local_info(event_booked_seats)
@@ -1814,8 +1904,8 @@ ad_proc im_event_cube_render_event {
     set event_resource_abbreviation $event_local_info(event_resource_abbreviation)
 
     set event_url [export_vars -base "/intranet-events/new" {{form_mode display} event_id}]
-
     set cell_width [parameter::get -package_id [apm_package_id_from_key intranet-events] -parameter "EventCubeCellWidth" -default 50]
+    array set event_participant_status_hash $event_participant_states
 
     set consultants [list]
     set customers [list]
@@ -1837,9 +1927,13 @@ ad_proc im_event_cube_render_event {
 			    lappend trainers $user_name
 			}
 		    }
-		    lappend consultants "$user_name"
+		    lappend consultants "$user_name ([im_category_from_id $role_id])"
 		} else {
-		    lappend customers "$customer - $user_name"
+		    set status ""
+		    if {[info exists event_participant_status_hash($user_id)]} { 
+			set status "([im_category_from_id $event_participant_status_hash($user_id)])"
+		    }
+		    lappend customers "$customer - $user_name $status"
 		}
 	    }
 	    im_conf_item {
