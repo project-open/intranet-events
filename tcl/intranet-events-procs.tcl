@@ -577,6 +577,7 @@ ad_proc im_event_cube {
     {-event_cost_center_id "" }
     {-event_location_id "" }
     {-event_creator_id "" }
+    {-event_modificator_id "" }
     {-event_name "" }
     {-report_start_date "" }
     {-report_end_date ""}
@@ -632,6 +633,9 @@ ad_proc im_event_cube {
     }
     if {"" != $event_creator_id && 0 != $event_creator_id} {
 	lappend event_criteria "o.creation_user = '$event_creator_id'"
+    }
+    if {"" != $event_modificator_id && 0 != $event_modificator_id} {
+	lappend event_criteria "o.modifying_user = '$event_modificator_id'"
     }
     if {"" != $event_material_id && 0 != $event_material_id} {
 	lappend event_criteria "e.event_material_id = '$event_material_id'"
@@ -730,9 +734,11 @@ ad_proc im_event_cube {
 				u.user_id as user_id
 			from	users u,
 				acs_rels r,
-				im_events e
+				im_events e,
+				acs_objects o
 			where	r.object_id_one = e.event_id and
-				r.object_id_two = u.user_id
+				r.object_id_two = u.user_id and
+				e.event_id = o.object_id
 				$event_where_clause
 	    )"
 	}
@@ -747,9 +753,11 @@ ad_proc im_event_cube {
 				u.user_id as user_id
 			from	users u,
 				acs_rels r,
-				im_events e
+				im_events e,
+				acs_objects o
 			where	r.object_id_one = e.event_id and
-				r.object_id_two = u.user_id
+				r.object_id_two = u.user_id and
+				e.event_id = o.object_id
 				$event_where_clause
 	    )"
 	}
@@ -815,8 +823,9 @@ ad_proc im_event_cube {
 	"" - locations_with_events {
 	    lappend location_criteria "ci.conf_item_id in (
 			select	e.event_location_id
-			from	im_events e
-			where	1 = 1
+			from	im_events e,
+				acs_objects o
+			where	e.event_id = o.object_id
 				$event_where_clause
 	    )"
 	}
@@ -862,8 +871,10 @@ ad_proc im_event_cube {
 	    lappend resource_criteria "ci.conf_item_id in (
 			select	r.object_id_two
 			from	im_events e,
+				acs_objects o,
 				acs_rels r
-			where	r.object_id_one = e.event_id
+			where	r.object_id_one = e.event_id and
+				e.event_id = o.object_id
 				$event_where_clause
 	    )"
 	}

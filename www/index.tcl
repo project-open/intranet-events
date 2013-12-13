@@ -19,6 +19,7 @@ ad_page_contract {
     { event_cost_center_id:integer 0 } 
     { event_location_id:integer 0 } 
     { event_creator_id:integer "" } 
+    { event_modificator_id:integer "" } 
     { customer_id:integer 0 } 
     { customer_contact_id:integer 0 } 
     { letter:trim "" }
@@ -72,7 +73,7 @@ if {[catch {
 }
 
 # Capture the filter parameters for pass-through later
-set pass_through_vars [list order_by start_date event_name event_status_id event_type_id event_material_id event_cost_center_id event_location_id event_creator_id customer_id customer_contact_id letter start_idx how_many view_name timescale report_event_selection report_user_selection report_location_selection report_resource_selection report_show_event_list_p]
+set pass_through_vars [list order_by start_date event_name event_status_id event_type_id event_material_id event_cost_center_id event_location_id event_creator_id event_modificator_id customer_id customer_contact_id letter start_idx how_many view_name timescale report_event_selection report_user_selection report_location_selection report_resource_selection report_show_event_list_p]
 foreach param $pass_through_vars {
     set param_hash($param) [expr "\$$param"]
 }
@@ -207,7 +208,7 @@ db_foreach column_list_sql $column_sql {
 	# Build the column header
 	regsub -all " " $column_name "_" col_txt
 	set col_txt [lang::message::lookup "" intranet-events.$col_txt $column_name]
-	set col_url [export_vars -base "index" {event_id start_date timescale report_user_selection report_event_selection report_location_selection report_resource_selection report_show_event_list_p event_name event_creator_id {order_by $column_name}}]
+	set col_url [export_vars -base "index" {event_id start_date timescale report_user_selection report_event_selection report_location_selection report_resource_selection report_show_event_list_p event_name event_creator_id event_modificator_id {order_by $column_name}}]
 
 	# Append the DynField values from the Filter as pass-through variables
 	# so that sorting won't alter the selected events
@@ -285,16 +286,34 @@ set event_member_options [util_memoize "db_list_of_lists event_members {
 	order by user_name
 }" 300]
 set event_member_options [linsert $event_member_options 0 [list $all_l10n ""]]
+
 set event_creator_options [list]
-set event_creator_options [db_list_of_lists event_creators "
+set event_creator_options [util_memoize [list db_list_of_lists event_creators "
 	select	distinct
 		im_name_from_user_id(creation_user) as creator_name,
 		creation_user as creator_id
 	from	acs_objects
-	where	object_type = :object_type
+	where	object_type = '$object_type'
 	order by creator_name
-"]
+"]]
 set event_creator_options [linsert $event_creator_options 0 [list "" ""]]
+
+
+set event_modificator_options [list]
+set event_modificator_options [util_memoize [list db_list_of_lists event_modificators "
+	select	distinct
+		im_name_from_user_id(modifying_user) as modificator_name,
+		modifying_user as modificator_id
+	from	acs_objects
+	where	object_type = '$object_type'
+	order by modificator_name
+"]]
+set event_modificator_options [linsert $event_modificator_options 0 [list "" ""]]
+
+
+
+
+
 
 set material_options [im_material_options \
 			 -restrict_to_status_id 0 \
@@ -337,6 +356,7 @@ if {$view_events_all_p} {
     ad_form -extend -name $form_id -form {
 	{event_type_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Type Type]"} {custom {category_type "Intranet Event Type" translate_p 1 package_key "intranet-core"} } }
 	{event_creator_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Creator Creator]"} {options $event_creator_options}}
+	{event_modificator_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Modificator Modificator]"} {options $event_modificator_options}}
     }
 
     template::element::set_value $form_id event_status_id $event_status_id
@@ -395,6 +415,10 @@ if { [empty_string_p $event_cost_center_id] == 0 && $event_cost_center_id != 0 }
 
 if { [empty_string_p $event_creator_id] == 0 && $event_creator_id != 0 } {
     lappend criteria "e.event_id in (select object_id from acs_objects where creation_user = :event_creator_id)"
+}
+
+if { [empty_string_p $event_modificator_id] == 0 && $event_modificator_id != 0 } {
+    lappend criteria "e.event_id in (select object_id from acs_objects where modifying_user = :event_modificator_id)"
 }
 
 if { ![empty_string_p $customer_id] && $customer_id != 0 } {
@@ -742,6 +766,7 @@ set event_cube_html [im_event_cube \
 			 -event_cost_center_id $event_cost_center_id_org \
 			 -event_location_id $event_location_id_org \
 			 -event_creator_id $event_creator_id \
+			 -event_modificator_id $event_modificator_id \
 			 -event_name $event_name_org \
 			 -report_start_date $report_start_date \
 			 -report_end_date $report_end_date \

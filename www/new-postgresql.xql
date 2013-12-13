@@ -26,7 +26,8 @@
 <fullquery name="event_update_acs_object">
     <querytext>
 		update acs_objects set
-			last_modified = now()
+			last_modified = now(),
+			modifying_user = :current_user_id
 		where object_id = :event_id
     </querytext>
 </fullquery>
