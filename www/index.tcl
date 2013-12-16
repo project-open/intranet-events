@@ -359,15 +359,15 @@ if {$view_events_all_p} {
 	{event_modificator_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Modificator Modificator]"} {options $event_modificator_options}}
     }
 
-    template::element::set_value $form_id event_status_id $event_status_id
-    template::element::set_value $form_id event_type_id $event_type_id
+    template::element::set_value $form_id event_status_id [im_opt_val event_status_id]
+    template::element::set_value $form_id event_type_id [im_opt_val event_type_id]
 
 }
 
-template::element::set_value $form_id start_date $start_date
-template::element::set_value $form_id timescale $timescale
-template::element::set_value $form_id event_material_id $event_material_id
-template::element::set_value $form_id event_cost_center_id $event_cost_center_id
+template::element::set_value $form_id start_date [im_opt_val start_date]
+template::element::set_value $form_id timescale [im_opt_val timescale]
+template::element::set_value $form_id event_material_id [im_opt_val event_material_id]
+template::element::set_value $form_id event_cost_center_id [im_opt_val event_cost_center_id]
 template::element::set_value $form_id report_event_selection [im_opt_val report_events_selection]
 template::element::set_value $form_id report_user_selection [im_opt_val report_users_selection]
 template::element::set_value $form_id report_location_selection [im_opt_val report_location_selection]

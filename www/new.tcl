@@ -710,6 +710,21 @@ set cost_center_options [im_cost_center_options \
 ]
 
 
+set event_modificator_options [list]
+set event_modificator_options [util_memoize [list db_list_of_lists event_modificators "
+	select	distinct
+		im_name_from_user_id(modifying_user) as modificator_name,
+		modifying_user as modificator_id
+	from	acs_objects
+	where	object_type = '$object_type'
+	order by modificator_name
+"]]
+set event_modificator_options [linsert $event_modificator_options 0 [list "" ""]]
+
+
+
+
+
 ad_form \
     -name $form_id \
     -action $action_url \
@@ -729,18 +744,22 @@ ad_form \
 	{event_status_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Status Status]"} {custom {category_type "Intranet Event Status" translate_p 1 package_key "intranet-core"}} }
     }
 
+
+
+
 if {$view_events_all_p} {  
     ad_form -extend -name $form_id -form {
 	{event_type_id:text(im_category_tree),optional {label "[lang::message::lookup {} intranet-events.Type Type]"} {custom {category_type "Intranet Event Type" translate_p 1 package_key "intranet-core"} } }
 	{event_creator_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Creator Creator]"} {options $event_creator_options}}
+	{event_modificator_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Modificator Modificator]"} {options $event_modificator_options}}
     }
 
-    template::element::set_value $form_id event_status_id $event_status_id
-    template::element::set_value $form_id event_type_id $event_type_id
+    template::element::set_value $form_id event_status_id [im_opt_val event_status_id]
+    template::element::set_value $form_id event_type_id [im_opt_val event_type_id]
 
 }
 
-template::element::set_value $form_id start_date $start_date
+template::element::set_value $form_id start_date [im_opt_val start_date]
 template::element::set_value $form_id timescale [im_opt_val timescale]
 template::element::set_value $form_id event_material_id [im_opt_val event_material_id]
 template::element::set_value $form_id event_cost_center_id [im_opt_val event_cost_center_id]
@@ -749,6 +768,8 @@ template::element::set_value $form_id report_user_selection [im_opt_val report_u
 template::element::set_value $form_id report_location_selection [im_opt_val report_location_selection]
 template::element::set_value $form_id report_resource_selection [im_opt_val report_resource_selection]
 template::element::set_value $form_id report_show_event_list_p [im_opt_val report_show_event_list_p]
+
+
 
 
 im_dynfield::append_attributes_to_form \
