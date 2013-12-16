@@ -913,11 +913,14 @@ ad_proc im_event_cube {
 		e.event_end_date::date as end_d,
 		(e.event_end_date::date - e.event_start_date::date + 1) as event_duration,
 		ci.conf_item_id as resource_id
-	from	im_events e,
+	from	acs_objects o,
+		im_events e,
 		acs_rels r,
 		im_conf_items ci
 	where	r.object_id_two = ci.conf_item_id and
-                r.object_id_one = e.event_id
+                r.object_id_one = e.event_id and
+		e.event_id = o.object_id and
+		e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
 		$event_where_clause
     "
     db_foreach resource_conflict_checker $resource_conflict_checker_sql {
@@ -949,7 +952,8 @@ ad_proc im_event_cube {
 	where	e.event_id = o.object_id and
 		r.object_id_one = e.event_id and
 		r.object_id_two = u.user_id and
-		r.rel_id = bom.rel_id
+		r.rel_id = bom.rel_id and
+		e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
     "
     # Create a list of (user -> status) tuples per event
     # that describes the member status of the participants
@@ -994,7 +998,8 @@ ad_proc im_event_cube {
 		LEFT OUTER JOIN im_materials m ON (e.event_material_id = m.material_id)
 		LEFT OUTER JOIN acs_rels r ON (r.object_id_one = e.event_id)
 		LEFT OUTER JOIN users u ON (r.object_id_two = u.user_id)
-	where	o.object_id = e.event_id
+	where	o.object_id = e.event_id and
+		e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
 		$event_where_clause
     "
     array set user_event_hash {}
@@ -1123,7 +1128,8 @@ ad_proc im_event_cube {
 		r.object_id_one = e.event_id and
 		r.object_id_two = ci.conf_item_id and
 		e.event_start_date <= :report_end_date::date and
-		e.event_end_date >= :report_start_date::date
+		e.event_end_date >= :report_start_date::date and
+		e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
 		$event_where_clause
     "
     array set resource_hash {}

@@ -567,7 +567,8 @@ set sql "
 			LEFT OUTER JOIN im_conf_items loc ON (e.event_location_id = loc.conf_item_id)
 			$extra_from
 		WHERE
-			e.event_id = o.object_id
+			e.event_id = o.object_id and
+			e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
 			$where_clause
 			$extra_where
 		$order_by_clause
