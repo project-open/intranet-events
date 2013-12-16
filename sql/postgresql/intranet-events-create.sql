@@ -387,6 +387,9 @@ declare
 begin
 	select	coalesce(e.event_name, '') || ' ' ||
 		coalesce(e.event_nr, '') || ' ' ||
+		coalesce(e.event_consultant_abbreviation, '') || ' ' ||
+		coalesce(e.event_location_abbreviation, '') || ' ' ||
+		coalesce(e.event_resource_abbreviation, '') || ' ' ||
 		coalesce(e.event_description, '') || ' ' ||
 		coalesce(im_category_from_id(e.event_status_id), '') || ' ' ||
 		coalesce(im_category_from_id(e.event_type_id), '') || ' ' ||
@@ -436,6 +439,8 @@ FOR EACH ROW
 EXECUTE PROCEDURE im_events_tsearch();
 
 
+-- Reindex all events
+update im_events set event_nr = event_nr;
 
 
 
@@ -1107,4 +1112,71 @@ SELECT acs_permission__grant_permission(
         (select plugin_id from im_component_plugins where plugin_name = 'Event Resources' and package_name = 'intranet-events'),
         (select group_id from groups where group_name = 'Employees'),
         'read'
+);
+
+
+
+
+
+
+
+-- ------------------------------------------------------
+-- Filestorage
+
+SELECT	im_component_plugin__new (
+	null,					-- plugin_id
+	'im_component_plugin',			-- object_type
+	now(),					-- creation_date
+	null,					-- creation_user
+	null,					-- creation_ip
+	null,					-- context_id
+
+	'Filestorage',				-- component_name - shown in menu
+	'intranet-events',			-- package_name
+	'bottom',				-- location
+	'/intranet-events/new',			-- page_url
+	null,					-- view_name
+	210,					-- sort_order
+	'im_filestorage_event_component $current_user_id $event_id $event_name $return_url', -- component_tcl
+	'lang::message::lookup "" intranet-events.Event_Filestorage "Event Filestorage"'
+);
+
+SELECT acs_permission__grant_permission(
+	(select plugin_id from im_component_plugins where plugin_name = 'Filestorage' and package_name = 'intranet-events'),
+	(select group_id from groups where group_name = 'Employees'),
+	'read'
+);
+
+
+-----------------------------------------------------------
+-- Component Plugin
+--
+-- Forum component on the ticket page itself
+
+SELECT im_component_plugin__new (
+	null,				-- plugin_id
+	'im_component_plugin',		-- object_type
+	now(),				-- creation_date
+	null,				-- creation_user
+	null,				-- creation_ip
+	null,				-- context_id
+	'Discussions',			-- plugin_name - shown in menu
+	'intranet-events',		-- package_name
+	'right',			-- location
+	'/intranet-events/new',		-- page_url
+	null,				-- view_name
+	100,				-- sort_order
+	'dummy',
+	'im_forum_create_bar "<B>[_ intranet-forum.Forum_Items]<B>" $event_id $return_url'
+);
+
+update im_component_plugins set 
+component_tcl = 'im_forum_component -user_id $current_user_id -forum_object_id $event_id -current_page_url $current_url -return_url $return_url -export_var_list {order_by start_date event_name event_status_id event_type_id event_material_id event_cost_center_id event_location_id event_creator_id event_modificator_id customer_id customer_contact_id letter start_idx how_many view_name timescale report_event_selection report_user_selection report_location_selection report_resource_selection report_show_event_list_p} -forum_type event -view_name [im_opt_val forum_view_name] -forum_order_by [im_opt_val forum_order_by] -restrict_to_mine_p "f" -restrict_to_new_topics 0',
+title_tcl = 'im_forum_create_bar "<B>[_ intranet-forum.Forum_Items]<B>" $event_id $return_url'
+where  plugin_name = 'Discussions' and package_name = 'intranet-events';
+
+SELECT acs_permission__grant_permission(
+	(select plugin_id from im_component_plugins where plugin_name = 'Discussions' and package_name = 'intranet-events'),
+	(select group_id from groups where group_name = 'Employees'),
+	'read'
 );

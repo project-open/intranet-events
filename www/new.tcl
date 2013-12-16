@@ -291,7 +291,7 @@ if {$edit_p} { lappend actions [list [lang::message::lookup {} intranet-events.E
 
 ns_log Notice "new: ad_form: Setup fields"
 ad_form \
-    -name event \
+    -name event_form \
     -cancel_url "/intranet-events" \
     -action $action_url \
     -actions $actions \
@@ -353,7 +353,7 @@ if {[info exists event_id]} {
 }
 
 ns_log Notice "new: ad_form: extend with event_elements"
-ad_form -extend -name event -form $event_elements
+ad_form -extend -name event_form -form $event_elements
 
 
 
@@ -371,7 +371,7 @@ set field_cnt [im_dynfield::append_attributes_to_form \
                        -form_display_mode $form_mode \
                        -object_subtype_id $dynfield_event_type_id \
                        -object_type "im_event" \
-                       -form_id event \
+                       -form_id event_form \
                        -object_id $dynfield_event_id \
 ]
 
@@ -385,7 +385,7 @@ set form_action [template::form::get_action event]
 if {"" != $form_action} { set form_mode "edit" }
 
 ns_log Notice "new: before ad_form on_request"
-ad_form -extend -name event -on_request {
+ad_form -extend -name event_form -on_request {
     ns_log Notice "new: on_request"
 
     set event_status_id 82000
@@ -423,7 +423,7 @@ ad_form -extend -name event -on_request {
     im_dynfield::attribute_store \
 	-object_type "im_event" \
 	-object_id $event_id \
-	-form_id event
+	-form_id event_form
     
     # Workflow?
     set wf_key [db_string wf "select trim(aux_string1) from im_categories where category_id = :event_type_id" -default ""]
@@ -478,7 +478,7 @@ ad_form -extend -name event -on_request {
     im_dynfield::attribute_store \
 	-object_type "im_event" \
 	-object_id $event_id \
-	-form_id event
+	-form_id event_form
 
     # Write Audit Trail
     im_project_audit -project_id $event_id -action after_update

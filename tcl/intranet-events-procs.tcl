@@ -1697,8 +1697,6 @@ ad_proc im_event_cube {
 		}
 	    }
 
-
-	    
 	    append table_body [im_event_cube_render_cell -value $value -event_html $event_html]
 	}
 	append table_body "<td colspan=2><nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]' title='${location_name}\n${location_note}'>$location_nr ($location_seats)</a></nobr></td>\n"
@@ -2014,7 +2012,7 @@ ad_proc im_event_cube_render_event {
     set result "
       <div style='position: relative'>
 <div style='position: absolute; top: $top_distance; left: -3; width: $event_width; z-index:10; background: yellow; opacity: 0.8;'>
-<table cellspacing=0 cellpadding=0 border=$border_width bgcolor=#$bgcolor bordercolor=$bordercolor width='100%'>
+<table cellspacing=0 cellpadding=0 border=$border_width bgcolor=#$bgcolor bordercolor=$bordercolor width='${event_width}px'>
 <tr>
 <td bgcolor=#$bgcolor>
 <nobr><a href=$event_url title='$event_title' target='_blank'>$kuerzel</a>&nbsp;</nobr>

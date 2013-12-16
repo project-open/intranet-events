@@ -22,7 +22,7 @@
 	<tr valign="top">
 	<td width="50%">
 		<%= [im_box_header "[lang::message::lookup "" intranet-events.Event_Details "Event Details"]"] %>
-		<formtemplate id="event"></formtemplate>
+		<formtemplate id="event_form"></formtemplate>
 		@event_timesheet_task_html;noquote@
 
 <!--		@event_action_html;noquote@
@@ -44,7 +44,7 @@
                 <tr valign="top">
                 <td>
 		    <%= [im_box_header $page_title] %>
-		    <formtemplate id="event"></formtemplate>
+		    <formtemplate id="event_form"></formtemplate>
 		    <%= [im_box_footer] %>
                 </td>
                 <td>
