@@ -568,7 +568,7 @@ set sql "
 			$extra_from
 		WHERE
 			e.event_id = o.object_id and
-			e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
+			(e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","]) OR :event_status_id = [im_event_status_deleted])
 			$where_clause
 			$extra_where
 		$order_by_clause

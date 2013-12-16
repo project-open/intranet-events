@@ -34,4 +34,18 @@ set rel_id [im_biz_object_add_role $user_id $event_id $role_id]
 db_dml update_rel "update im_biz_object_members set member_status_id = [im_event_participant_status_reserved] where rel_id = :rel_id"
 
 
+# Mark the event as changed and call callback
+db_dml update_object "
+	update acs_objects set 
+	   	last_modified = now(),
+	   	modifying_user = :current_user_id,
+		modifying_ip = '[ad_conn peeraddr]'
+	where object_id = :event_id
+"
+
+# Audit the object
+im_audit -object_id $event_id -action "after_update"
+
+
+
 ad_returnredirect $return_url
