@@ -184,8 +184,10 @@ namespace eval im_event {
 	    set uom_id [im_uom_hour]
 	    set task_type_id [im_project_type_task]
 	    set note $event_description
-	    set planned_units 0
-	    set billable_units 0
+
+	    # Get the planned time for the action from a special NAV field from im_materials
+	    set planned_units [db_string planned_units "select nav_planned_execution_time_hours from im_materials where material_id = :material_id" -default 0]
+	    set billable_units $planned_units
 	    set percent_completed ""
 
 	    switch $event_status_id {
