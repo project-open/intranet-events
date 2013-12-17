@@ -12,4 +12,4 @@ ad_library {
 nsv_set intranet_events sweeper_p 0
 
 # Check for changed events every X minutes
-ad_schedule_proc -thread t [parameter::get_from_package_key -package_key intranet-events -parameter EventTaskSweeperInterval -default 60] im_event::task_sweeper 
+ad_schedule_proc -thread t [parameter::get_from_package_key -package_key intranet-events -parameter EventTaskSweeperInterval -default 600] im_event::task_sweeper 

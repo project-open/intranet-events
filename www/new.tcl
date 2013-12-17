@@ -849,6 +849,13 @@ if {[info exists event_id] && "" != $event_id && 0 != $event_id} {
     append event_timesheet_task_html "<li><a href='[export_vars -base "/intranet-events/ical.ics" {event_id}]'>[lang::message::lookup "" intranet-events.iCal_ics "iCal.ics (experimental)"]</a></li>\n"
 }
 
+# Check if the sweeper got blocked somehow.
+# This is until the cause has been detected.
+if {[nsv_incr intranet_events sweeper_p 0] > 0} {
+    set event_timesheet_task_html "<li><a href='[export_vars -base "/intranet-events/reset-sweeper-semaphore" {return_url}]'>[lang::message::lookup "" intranet-events.Semaphore_blocked_reset "The 'task_sweeper' semaphore is blocked by an internal error, please unblock."]</a></li>\n"    
+}
+
+
 if {"" != $event_timesheet_task_html} {
     set event_timesheet_task_html "<ul>$event_timesheet_task_html</ul>\n"
 }
