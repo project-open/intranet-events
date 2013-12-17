@@ -45,8 +45,7 @@
 		cost_center_id		= :cost_center_id,
 		uom_id 			= :uom_id,
 		planned_units		= :planned_units,
-		billable_units		= :billable_units,
-		value_factor		= 1.00
+		billable_units		= :billable_units
 	where
 		task_id = :event_timesheet_task_id;
     </querytext>
