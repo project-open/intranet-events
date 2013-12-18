@@ -849,12 +849,40 @@ if {[info exists event_id] && "" != $event_id && 0 != $event_id} {
     append event_timesheet_task_html "<li><a href='[export_vars -base "/intranet-events/ical.ics" {event_id}]'>[lang::message::lookup "" intranet-events.iCal_ics "iCal.ics (experimental)"]</a></li>\n"
 }
 
+
+# Event Project Links
+set event_project_html ""
+set event_order_projects [db_list_of_lists event_order_nrs "
+	select distinct
+		c.project_id,
+		acs_object__name(c.project_id) as project_name
+	from	im_companies cust,
+		im_invoice_items ii,
+		im_costs c,
+		im_event_order_item_rels eoir
+	where	ii.invoice_id = c.cost_id and
+		c.customer_id = cust.company_id and
+		eoir.event_id = :event_id and
+		eoir.order_item_id = ii.item_id and
+		c.project_id is not null
+	order by
+		project_name
+"]
+foreach tuple $event_order_projects {
+    set project_id [lindex $tuple 0]
+    set project_name [lindex $tuple 1]
+    append event_project_html "<li><a href=[export_vars -base "/intranet/projects/view" {project_id}]>$project_name</a></li>\n"
+}
+if {"" != $event_project_html} {
+    append event_timesheet_task_html "<li>[lang::message::lookup "" intranet-events.Related_projects "Related Projects"]:<ul>$event_project_html</ul></li>\n"
+}
+
+
 # Check if the sweeper got blocked somehow.
 # This is until the cause has been detected.
 if {[nsv_incr intranet_events sweeper_p 0] > 0} {
     set event_timesheet_task_html "<li><a href='[export_vars -base "/intranet-events/reset-sweeper-semaphore" {return_url}]'>[lang::message::lookup "" intranet-events.Semaphore_blocked_reset "The 'task_sweeper' semaphore is blocked by an internal error, please unblock."]</a></li>\n"    
 }
-
 
 if {"" != $event_timesheet_task_html} {
     set event_timesheet_task_html "<ul>$event_timesheet_task_html</ul>\n"
