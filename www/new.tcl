@@ -809,6 +809,7 @@ set admin_html "<ul>"
 
 if {[im_permission $current_user_id "add_events"]} {
     append admin_html "<li><a href=\"/intranet-events/new\">[lang::message::lookup "" intranet-events.Add_a_new_event "New Event"]</a>\n"
+    append admin_html "<li><a href=\"[export_vars -base "/intranet-events/clone" {event_id return_url}]\">[lang::message::lookup "" intranet-events.Clone_this_eventt "Clone this Event"]</a>\n"
 
     set wf_oid_col_exists_p [im_column_exists wf_workflows object_type]
     if {$wf_oid_col_exists_p} {
