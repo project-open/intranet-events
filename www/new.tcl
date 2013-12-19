@@ -113,6 +113,7 @@ set action_url "/intranet-events/new"
 set focus "event.var_name"
 
 set view_events_all_p [im_permission $current_user_id "view_events_all"]
+set current_user_is_admin_p [im_is_user_site_wide_or_intranet_admin $current_user_id]
 set copy_from_event_name ""
 
 # message_html allows us to add a warning popup etc.
@@ -132,6 +133,7 @@ if {[info exists event_id]} {
     set admin_p $view_p
 }
 
+# Required by im_group_member_component 
 set user_admin_p $write_p
 
 # ----------------------------------------------
@@ -826,6 +828,10 @@ if {[im_permission $current_user_id "add_events"]} {
 	    append admin_html "<li><a href=\"$new_from_wf_url\">[lang::message::lookup "" intranet-events.New_workflow "New %wf_name%"]</a>\n"
 	}
     }
+}
+
+if {$current_user_is_admin_p} {
+    append admin_html "<li><a href=\"[export_vars -base "/intranet-events/nuke" {event_id}]\">[lang::message::lookup "" intranet-events.Nuke_this_eventt "Nuke this Event"]</a>\n"    
 }
 
 # Append user-defined menus
