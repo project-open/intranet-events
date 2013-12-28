@@ -740,7 +740,8 @@ ad_proc im_event_cube {
 				acs_objects o
 			where	r.object_id_one = e.event_id and
 				r.object_id_two = u.user_id and
-				e.event_id = o.object_id
+				e.event_id = o.object_id and
+				e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
 				$event_where_clause
 	    )"
 	}
@@ -759,7 +760,8 @@ ad_proc im_event_cube {
 				acs_objects o
 			where	r.object_id_one = e.event_id and
 				r.object_id_two = u.user_id and
-				e.event_id = o.object_id
+				e.event_id = o.object_id and
+				e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
 				$event_where_clause
 	    )"
 	}
@@ -827,7 +829,8 @@ ad_proc im_event_cube {
 			select	e.event_location_id
 			from	im_events e,
 				acs_objects o
-			where	e.event_id = o.object_id
+			where	e.event_id = o.object_id and
+				e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
 				$event_where_clause
 	    )"
 	}
@@ -876,7 +879,8 @@ ad_proc im_event_cube {
 				acs_objects o,
 				acs_rels r
 			where	r.object_id_one = e.event_id and
-				e.event_id = o.object_id
+				e.event_id = o.object_id and
+				e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
 				$event_where_clause
 	    )"
 	}
