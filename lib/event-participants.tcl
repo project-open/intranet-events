@@ -22,26 +22,54 @@ set form_mode "display"
 # ******************************************************
 
 set participant_options [db_list_of_lists participant_options "
-    	select	c.company_name || ' - ' || im_name_from_user_id(u.user_id),
-		user_id
-	from	users u,
-		persons pe,
-		parties pa,
-		acs_rels r,
-		im_biz_object_members bom,
-		im_companies c
-	where	u.user_id = pe.person_id and
-		u.user_id = pa.party_id and
-		r.object_id_two = u.user_id and
-		r.object_id_one = c.company_id and
-		r.rel_id = bom.rel_id and
-		c.company_id in (
-			select	object_id_two
-			from	acs_rels
-			where	object_id_one = :event_id     
-		)
+    	select	*
+	from	(
+		-- Users from all customers excluding any employees
+	    	select	c.company_name || ' - ' || im_name_from_user_id(u.user_id) as user_name,
+			user_id
+		from	users u,
+			persons pe,
+			parties pa,
+			acs_rels r,
+			im_biz_object_members bom,
+			im_companies c
+		where	u.user_id = pe.person_id and
+			u.user_id = pa.party_id and
+			r.object_id_two = u.user_id and
+			r.object_id_one = c.company_id and
+			r.rel_id = bom.rel_id and
+			c.company_id in (
+				select	object_id_two
+				from	acs_rels
+				where	object_id_one = :event_id     
+			) and
+			c.company_path != 'internal' and
+			u.user_id not in (select member_id from group_distinct_member_map where group_id = [im_profile_employees])
+	UNION
+		-- Users from the internal company, if explicitely included in event customers
+	    	select	c.company_name || ' - ' || im_name_from_user_id(u.user_id) as user_name,
+			user_id
+		from	users u,
+			persons pe,
+			parties pa,
+			acs_rels r,
+			im_biz_object_members bom,
+			im_companies c
+		where	u.user_id = pe.person_id and
+			u.user_id = pa.party_id and
+			r.object_id_two = u.user_id and
+			r.object_id_one = c.company_id and
+			r.rel_id = bom.rel_id and
+			c.company_id in (
+				select	object_id_two
+				from	acs_rels
+				where	object_id_one = :event_id     
+			) and
+			c.company_path = 'internal'
+		) t
+	where
 		-- Exclude already existing members
-		and u.user_id not in (
+		t.user_id not in (
 			select	u.user_id
 			from	users u,
 				acs_rels r,
@@ -49,11 +77,9 @@ set participant_options [db_list_of_lists participant_options "
 			where	r.rel_id = bom.rel_id and
 				r.object_id_two = u.user_id and
 				r.object_id_one = :event_id
-		) and
-		c.company_path != 'internal' and
-		u.user_id not in (select member_id from group_distinct_member_map where group_id = [im_profile_employees])
+		)
 	order by
-		c.company_name, pe.first_names, pe.last_name
+		user_name
 "]
 
 # set participant_options [linsert $participant_options 0 [list "" ""]]
