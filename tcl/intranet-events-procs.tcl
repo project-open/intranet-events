@@ -570,6 +570,21 @@ ad_proc -public im_event_navbar {
 # Event Cube
 # ---------------------------------------------------------------------
 
+ad_proc -public im_event_cube_shorten_user_name {
+    {-max_characters 5}
+    user_name
+} {
+    Cuts the user's first and last name to max_characters each.
+} {
+    set result_list {}
+    foreach n $user_name {
+	set n_short [string range $n 0 [expr $max_characters - 1]]
+	if {$n != $n_short} { append n_short "..." }
+	lappend result_list $n_short
+    }
+    return [join $result_list " "]
+}
+
 
 ad_proc im_event_cube {
     {-param_hash_values "" }
@@ -1543,7 +1558,7 @@ ad_proc im_event_cube {
 		if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
 		    if {6 == $date_day_of_week} { 
 			# Saturday - Add the sconsultant
-			append event_html "<nobr><a href='[export_vars -base $user_url {user_id}]'>$user_name</a></nobr><br><nobr><a href='$office_url'></a>$user_office_name"
+			append event_html "<a href='[export_vars -base $user_url {user_id}]'>[im_event_cube_shorten_user_name $user_name]</a>"
 		    }
 		}
 	    }
@@ -1704,7 +1719,7 @@ ad_proc im_event_cube {
 		if {[expr $week_ctr % $show_kw_every_n_weeks] == 0} {
 		    if {6 == $date_day_of_week} { 
 			# Saturday - Add the sconsultant
-			append event_html "<nobr><a href='[export_vars -base $location_url {location_id}]'>$location_nr ($location_seats)</a></nobr>"
+			append event_html "<nobr><a href='[export_vars -base $location_url {{conf_item_id $location_id} {form_mode display}}]'>$location_nr ($location_seats)</a></nobr>"
 		    }
 		}
 	    }
