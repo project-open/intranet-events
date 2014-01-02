@@ -33,7 +33,7 @@ if {!$write} {
 }
 
 if {"" != $add_participant} {
-    set role_id 1300
+    set role_id 1311
     set rel_id [im_biz_object_add_role $user_id $event_id $role_id]
     db_dml update_rel "update im_biz_object_members set member_status_id = [im_event_participant_status_reserved] where rel_id = :rel_id"
 }
@@ -145,7 +145,7 @@ if {"" != $add_nn} {
 	im_profile::add_member -profile_id [im_profile_customers] -user_id $new_user_id
 
 	# Add the user to the company
-	set role_id 1300
+	set role_id 1311
 	set rel_id [im_biz_object_add_role $new_user_id $add_nn_customer_id $role_id]
 	db_dml update_rel "update im_biz_object_members set member_status_id = [im_event_participant_status_reserved] where rel_id = :rel_id"
 

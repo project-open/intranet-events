@@ -452,7 +452,7 @@ ad_proc -public im_event_permissions {user_id event_id view_var read_var write_v
 				im_biz_object_members bom
 			where	r.rel_id = bom.rel_id and
 				r.object_id_two in ([join $user_parties ","]) and
-				bom.object_role_id in (1301, 1302)
+				bom.object_role_id in (1301, 1302, 1308)
 		) t) as event_admin_p,
 		(select count(*) from (
 			-- cases with user as task_assignee

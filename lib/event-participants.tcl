@@ -211,15 +211,15 @@ db_multirow -extend {participant_url company_name company_url company_mouseover 
 		r.object_id_one = :event_id and
 		u.user_id = pe.person_id and
 		u.user_id = pa.party_id and
-		u.user_id in (
-			select	member_id
-			from	group_distinct_member_map
-			where	group_id = [im_profile_customers]  
-		)
+		bom.object_role_id = 1311
 	[template::list::orderby_clause -name participant_list -orderby]
 " {
     set delete_url [export_vars -base "participant-del" {event_id user_id return_url}]
     set participant_url [export_vars -base "/intranet/users/view" {user_id return_url}]
+    if {"" == $company_id} {
+	# No company - probably a Employee who is not member of the internal company
+	set company_id [im_company_internal]
+    }
     set company_url [export_vars -base "/intranet/companies/view" {company_id return_url}]
     set company_name [acs_object_name $company_id]
     set company_key_account_id [util_memoize [list db_string key_account "select min(r.object_id_two) from acs_rels r where r.object_id_one = $company_id and r.object_id_two in (select member_id from group_distinct_member_map where group_id = [im_profile_employees])" -default ""]]
