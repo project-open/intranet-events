@@ -551,13 +551,11 @@ set sql "
 			coalesce(loc.room_number_seats::varchar, '-') as room_number_seats,
 			(select count(*) from acs_rels qr, im_biz_object_members qbom 
 			 where qr.rel_id = qbom.rel_id and qbom.member_status_id = 82200 and
-			 qr.object_id_one = e.event_id and
-			 qr.object_id_two in (select member_id from group_distinct_member_map where group_id = 461)
+			 qr.object_id_one = e.event_id and qbom.object_role_id = 1311
 			) as room_booked,
 			(select count(*) from acs_rels qr, im_biz_object_members qbom 
 			 where qr.rel_id = qbom.rel_id and qbom.member_status_id = 82210 and
-			 qr.object_id_one = e.event_id and
-			 qr.object_id_two in (select member_id from group_distinct_member_map where group_id = 461)
+			 qr.object_id_one = e.event_id and qbom.object_role_id = 1311
 			) as room_reserved
 		FROM
 			acs_objects o,
