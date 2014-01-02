@@ -388,7 +388,7 @@ im_dynfield::set_local_form_vars_from_http -form_id $form_id
 
 array set extra_sql_array [im_dynfield::search_sql_criteria_from_form \
 			       -form_id $form_id \
-			       -object_type $object_type
+			       -object_type $object_type \
 ]
 
 # ---------------------------------------------------------------
@@ -528,7 +528,6 @@ if {"" != $dynfield_extra_where} {
 	    and event_id in $dynfield_extra_where
     "
 }
-
 
 
 # ---------------------------------------------------------------
