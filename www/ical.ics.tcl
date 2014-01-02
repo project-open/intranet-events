@@ -1,13 +1,16 @@
 # /packages/intranet-events/www/ical.ics.tcl
 #
-# Copyright (c) 2013 ]project-open[
+# Copyright (c) 2013 ]project-open[ & SolidLine AG
+#
+#
 #
 # All rights reserved. Please check
 # http://www.project-open.com/license/ for details.
 
 
+
 ad_page_contract {
-        @author frank.bergmann@project-open.com
+        @author frank.bergmann@project-open.com mharms@solidline.de
 } {
     event_id:integer
 }
@@ -27,7 +30,11 @@ db_1row event_info "
 select	t.*,
 	im_name_from_user_id(organizer_id) as organizer_name,
 	im_email_from_user_id(organizer_id) as organizer_email
-from	(select	e.*,
+from	
+	
+	(select	e.*,
+		cat.category,
+		m.material_name,
 		to_char(e.event_start_date, 'YYYY-MM-DD') as event_start_date_date,
 		to_char(e.event_end_date, 'YYYY-MM-DD') as event_end_date_date,
 		acs_object__name(e.event_location_id) as event_location_name,
@@ -38,10 +45,52 @@ from	(select	e.*,
 			r.rel_id = bom.rel_id and
 			bom.object_role_id = 1308
 		) as organizer_id
-	from	im_events e
+	from	im_events e, im_materials m, im_categories cat
 	where	e.event_id = :event_id
+		and m.material_id = e.event_material_id
+		and e.event_type_id = cat.category_id
+
 	) t
 "
+
+set participants_info ""
+set participants_info_sql "
+select	pe.first_names || ' ' || pe.last_name as participant_name,
+		u.user_id as participant_id,
+		im_category_from_id(bom.member_status_id) as participant_status,
+		bom.note as bom_note,
+		bom.order_item_id as bom_order_item_id,
+		company_name
+	from	persons pe,
+		parties pa,
+		users u,
+		acs_rels r,
+		im_biz_object_members bom,
+		im_companies comp
+	where	r.rel_id = bom.rel_id and
+		r.object_id_two = u.user_id and
+		r.object_id_one = :event_id and
+		comp.company_id = (select min(company_id) from im_companies, acs_rels where object_id_one = company_id and object_id_two = u.user_id) and
+		u.user_id = pe.person_id and
+		u.user_id = pa.party_id and
+		u.user_id in (
+			select	member_id
+			from	group_distinct_member_map
+			where	group_id = [im_profile_customers]  
+		)
+"
+
+db_foreach sql $participants_info_sql {
+  append participants_info "<li>Teilnehmer $participant_name, Firma $company_name</br>"
+}
+
+set participating_companies_info ""
+set participating_companies_sql "
+	select company_name from im_companies, acs_rels where object_id_one = :event_id and object_id_two = company_id
+"
+db_foreach sql $participating_companies_sql {
+  append participating_companies_info "$company_name</br>"
+}
 
 set event_start_hour_minute_second [parameter::get_from_package_key -package_key "intranet-events" -parameter "EventDefaultStartHour" -default "08:00:00"]
 set event_end_hour_minute_second [parameter::get_from_package_key -package_key "intranet-events" -parameter "EventDefaultEndHour" -default "17:00:00"]
@@ -54,7 +103,22 @@ set event_end_date_pretty "$event_end_date_date $event_end_hour_minute_second"
 set DTSTART [calendar::outlook::ics_timestamp_format -timestamp $event_start_date_pretty]
 set DTEND [calendar::outlook::ics_timestamp_format -timestamp $event_end_date_pretty]
 regexp {^([0-9]*)T} $DTSTART all CREATION_DATE
-set DESCRIPTION $event_description
+set DESCRIPTION ""
+set DESCRIPTION_html  "<b>Event</b><br />"
+append DESCRIPTION_html "<a href='http://10.144.1.199/intranet-events/new?form_mode=display&event_id=$event_id'>$event_name</a><br />"
+append DESCRIPTION_html "<br /><b>Ort</b><br />"
+append DESCRIPTION_html "$event_location_name<br />"
+append DESCRIPTION_html "<br /><b>Beschreibung</b><br />"
+append DESCRIPTION_html "$event_description<br />"
+append DESCRIPTION_html "<br /><b>Artikel</b><br />"
+append DESCRIPTION_html "$material_name<br />"
+append DESCRIPTION_html "<br /><b>Typ</b><br />"
+append DESCRIPTION_html "$category<br />"
+append DESCRIPTION_html "<br /><b>Event Kunden</b><br />"
+append DESCRIPTION_html "$participating_companies_info<br />"
+append DESCRIPTION_html "<br /><b>Event Teilnehmer</b><br />"
+append DESCRIPTION_html "$participants_info<br />"
+
 set TITLE $event_name
 
 
@@ -72,6 +136,8 @@ append ics_event 	"DTEND:$DTEND\r\n"
 # append ics_event 	"ORGANIZER;CN=\"$organizer_name\":$organizer_email\r\n"
 
 append ics_event 	"LOCATION:$event_location_name\r\n"
+append ics_event    "X-ALT-DESC;FMTTYPE=text/html:<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 3.2//EN'>\\n<HTML>\\n<HEAD>\\n<META NAME='Generator' CONTENT='MS Exchange Server version 08.00.0681.000'>\\n</HEAD>\\n<BODY>$DESCRIPTION_html</HTML>\r\n"
+	
 append ics_event 	"TRANSP:OPAQUE\r\n"
 append ics_event 	"SEQUENCE:0\r\n"
 append ics_event 	"UID:$event_id\r\n"
@@ -101,4 +167,3 @@ util_WriteWithExtraOutputHeaders $all_the_headers
 ns_startcontent -type $content_type
 
 ns_write $ics_event
-
