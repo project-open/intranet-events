@@ -431,6 +431,9 @@ ad_proc -public im_event_permissions {user_id event_id view_var read_var write_v
     set view_events_all_p [im_permission $user_id "view_events_all"]
     set edit_events_all_p [im_permission $user_id "edit_events_all"]
 
+#    ad_return_complaint 1 "view_events_all_p=$view_events_all_p, edit_events_all_p=$edit_events_all_p"
+
+
     # Determine the list of all groups in which the current user is a member
     set user_parties [im_profile::profiles_for_user -user_id $user_id]
     lappend user_parties $user_id
@@ -443,17 +446,21 @@ ad_proc -public im_event_permissions {user_id event_id view_var read_var write_v
 			from	acs_rels r,
 				im_biz_object_members bom
 			where	r.rel_id = bom.rel_id and
+				r.object_id_one = e.event_id and
 				r.object_id_two in ([join $user_parties ","])
 		) t) as event_member_p,
+
 		(select count(*) from (
 			-- admin of the event
 			select	distinct r.object_id_one
 			from	acs_rels r,
 				im_biz_object_members bom
 			where	r.rel_id = bom.rel_id and
+				r.object_id_one = e.event_id and
 				r.object_id_two in ([join $user_parties ","]) and
 				bom.object_role_id in (1301, 1302, 1308)
 		) t) as event_admin_p,
+
 		(select count(*) from (
 			-- cases with user as task_assignee
 			select distinct wfc.object_id
@@ -508,7 +515,8 @@ ad_proc -public im_event_permissions {user_id event_id view_var read_var write_v
     set view $read
     set admin $write
 
-#     ad_return_complaint 1 "read = $read = expr $admin_p || $owner_p || $event_member_p || $holding_user_p || $case_assignee_p || $view_events_all_p<br>write = $write = expr $admin_p || $owner_p || $event_admin_p || $holding_user_p || $case_assignee_p || $edit_events_all_p"
+
+     ad_return_complaint 1 "read = $read = expr $admin_p || $owner_p || $event_member_p || $holding_user_p || $case_assignee_p || $view_events_all_p<br>write = $write = expr $admin_p || $owner_p || $event_admin_p || $holding_user_p || $case_assignee_p || $edit_events_all_p"
 }
 
 
