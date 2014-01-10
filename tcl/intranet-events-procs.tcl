@@ -516,7 +516,7 @@ ad_proc -public im_event_permissions {user_id event_id view_var read_var write_v
     set admin $write
 
 
-     ad_return_complaint 1 "read = $read = expr $admin_p || $owner_p || $event_member_p || $holding_user_p || $case_assignee_p || $view_events_all_p<br>write = $write = expr $admin_p || $owner_p || $event_admin_p || $holding_user_p || $case_assignee_p || $edit_events_all_p"
+#     ad_return_complaint 1 "read = $read = expr $admin_p || $owner_p || $event_member_p || $holding_user_p || $case_assignee_p || $view_events_all_p<br>write = $write = expr $admin_p || $owner_p || $event_admin_p || $holding_user_p || $case_assignee_p || $edit_events_all_p"
 }
 
 
