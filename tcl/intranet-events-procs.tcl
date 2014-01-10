@@ -989,6 +989,8 @@ ad_proc im_event_cube {
     # ---------------------------------------------------------------
     # Events per user
     # ---------------------------------------------------------------
+
+    ### 0.5s
     
     set event_sql "
 	select	e.*,
@@ -1025,6 +1027,7 @@ ad_proc im_event_cube {
     "
     array set user_event_hash {}
     array set location_event_hash {}
+    ### 22.8
     db_foreach events $event_sql {
 
 	# User Event Hash
@@ -1132,6 +1135,8 @@ ad_proc im_event_cube {
 
 	}
     }
+
+    ### 23.3s
 
     # ---------------------------------------------------------------
     # Resources per user
@@ -1892,7 +1897,22 @@ ad_proc im_event_cube {
 }
 
 
-ad_proc im_event_cube_render_event { 
+ad_proc im_event_cube_render_event {
+    {-report_start_date_julian ""}
+    {-conflict_p 0}
+    {-location ""}
+    -event_values:required
+} {
+    Renders a single event as HTML DIV on top of a table.
+    The HTML needs to be inserted into the table cell
+    representing the day when the event starts.
+} {
+    set result [util_memoize [list im_event_cube_render_event_helper -report_start_date_julian $report_start_date_julian -conflict_p $conflict_p -location $location -event_values $event_values]]
+    return $result
+}
+
+
+ad_proc im_event_cube_render_event_helper { 
     {-report_start_date_julian ""}
     {-conflict_p 0}
     {-location ""}
