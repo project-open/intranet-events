@@ -80,8 +80,10 @@ select	pe.first_names || ' ' || pe.last_name as participant_name,
 		)
 "
 
+set participant_count 0 
 db_foreach sql $participants_info_sql {
   append participants_info "<li>Teilnehmer $participant_name, Firma $company_name</br>"
+  incr participant_count
 }
 
 set participating_companies_info ""
@@ -100,6 +102,9 @@ set event_end_date_pretty "$event_end_date_date $event_end_hour_minute_second"
 
 # ad_return_complaint 1 "$event_start_date - $event_start_date_pretty"
 
+set event_description_mapped [string map { \n "<br />" \r "<br />"} $event_description] 
+
+
 set DTSTART [calendar::outlook::ics_timestamp_format -timestamp $event_start_date_pretty]
 set DTEND [calendar::outlook::ics_timestamp_format -timestamp $event_end_date_pretty]
 regexp {^([0-9]*)T} $DTSTART all CREATION_DATE
@@ -109,15 +114,17 @@ append DESCRIPTION_html "<a href='http://10.144.1.199/intranet-events/new?form_m
 append DESCRIPTION_html "<br /><b>Ort</b><br />"
 append DESCRIPTION_html "$event_location_name<br />"
 append DESCRIPTION_html "<br /><b>Beschreibung</b><br />"
-append DESCRIPTION_html "$event_description<br />"
+append DESCRIPTION_html "$event_description_mapped<br />"
 append DESCRIPTION_html "<br /><b>Artikel</b><br />"
 append DESCRIPTION_html "$material_name<br />"
 append DESCRIPTION_html "<br /><b>Typ</b><br />"
 append DESCRIPTION_html "$category<br />"
 append DESCRIPTION_html "<br /><b>Event Kunden</b><br />"
 append DESCRIPTION_html "$participating_companies_info<br />"
-append DESCRIPTION_html "<br /><b>Event Teilnehmer</b><br />"
-append DESCRIPTION_html "$participants_info<br />"
+append DESCRIPTION_html "<br /><b>Event Teilnehmer ($participant_count)</b><br />"
+append DESCRIPTION_html "$participants_info<br /><br />"
+append DESCRIPTION_html "<a href='https://de.surveymonkey.com/s/Seminarleiter_SLAG'>Seminarbewertung für den Seminarleiter</a><br />"
+append DESCRIPTION_html "<a href='http://10.144.1.199/intranet/download/home/0/Teilnehmerliste_Leistungsnachweis/Teilnehmerliste.xlsm'>Teilnehmerliste / Zertifikat / Namensschilder</a><br />"
 
 set TITLE $event_name
 
@@ -136,7 +143,9 @@ append ics_event 	"DTEND:$DTEND\r\n"
 # append ics_event 	"ORGANIZER;CN=\"$organizer_name\":$organizer_email\r\n"
 
 append ics_event 	"LOCATION:$event_location_name\r\n"
-append ics_event    "X-ALT-DESC;FMTTYPE=text/html:<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 3.2//EN'>\\n<HTML>\\n<HEAD>\\n<META NAME='Generator' CONTENT='MS Exchange Server version 08.00.0681.000'>\\n</HEAD>\\n<BODY>$DESCRIPTION_html</HTML>\r\n"
+append ics_event    "X-ALT-DESC;FMTTYPE=text/html:<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 3.2//E
+    N'>\\n<HTML>\\n<HEAD>\\n<META NAME='Generator' CONTENT='MS Exchange Server ve
+    rsion 08.00.0681.000'>\\n</HEAD>\\n<BODY>$DESCRIPTION_html</HTML>\r\n"
 	
 append ics_event 	"TRANSP:OPAQUE\r\n"
 append ics_event 	"SEQUENCE:0\r\n"
