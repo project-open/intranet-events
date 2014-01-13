@@ -856,6 +856,10 @@ ad_proc im_event_cube {
 				e.event_status_id not in ([join [im_sub_categories [im_event_status_deleted]] ","])
 				$event_where_clause
 	    )"
+
+	    if {[im_column_exists im_conf_items hide_in_event_cube]} {
+		lappend location_criteria "ci.hide_in_event_cube is null"
+	    }
 	}
 	all_locations {
 	    # Nothing - just the entire list of locations
