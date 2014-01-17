@@ -36,7 +36,8 @@ from
 				im_invoice_items rii
                         where   rc.cost_id = rii.invoice_id and
 				rc.cost_type_id = 3791 and
-				rii.nav_order_item_id = ii.item_id
+				rii.nav_order_item_id = ii.item_id and
+				rii.nav_billable = '1'
 		) as rueckerfasst_units,
 		(	-- sum up the assignments of the order item in all other events
 			select	sum(oeoir.order_item_amount)
