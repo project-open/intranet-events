@@ -842,6 +842,9 @@ db_foreach event_color_codes $color_sql {
     if {$category_type != $last_category_type} {
 	set last_category_type $category_type
 	append admin_html "<tr><td class=rowwhite style='font-weight:bold'>$category_type</td></tr>\n"
+	set category_type_subst [string map {" " _} $category_type]
+	set category_type_l10n [lang::message::lookup "" intranet-timesheet2.$category_type_subst $category_type]
+	append admin_html "<tr><td class=rowwhite style='font-weight:bold'>$category_type_l10n</td></tr>\n"
     }
 
     # !!!
