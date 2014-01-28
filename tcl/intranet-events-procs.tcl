@@ -207,6 +207,10 @@ namespace eval im_event {
 		    # Squared
 		    set task_status_id [im_project_status_open]
 		}
+		754354 {
+		    # Delivered
+		    set task_status_id [im_project_status_delivered]
+		}
 		default {
 		    set task_status_id [im_project_status_open]
 		}
