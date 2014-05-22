@@ -276,7 +276,7 @@ foreach { value text } $timescale_types {
 }
 
 
-set event_member_options [util_memoize "db_list_of_lists event_members {
+set event_member_options [util_memoize [list db_list_of_lists event_members "
 	select  distinct
 		im_name_from_user_id(object_id_two) as user_name,
 		object_id_two as user_id
@@ -284,7 +284,7 @@ set event_member_options [util_memoize "db_list_of_lists event_members {
 		im_events p
 	where   r.object_id_one = p.event_id
 	order by user_name
-}" 300]
+"] 300]
 set event_member_options [linsert $event_member_options 0 [list $all_l10n ""]]
 
 set event_creator_options [list]
