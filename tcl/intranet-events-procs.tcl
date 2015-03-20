@@ -159,7 +159,7 @@ namespace eval im_event {
 					   -project_path       "${year}_events" \
 					   -company_id         [im_company_internal] \
 					   -parent_id          "" \
-					   -project_type_id    [im_project_type_consulting] \
+					   -project_type_id    [im_project_type_gantt] \
 					   -project_status_id  [im_project_status_open] \
 		]
 		db_dml update_parent_project "
