@@ -546,7 +546,7 @@ ad_proc -public im_event_navbar {
        search shortcuts, defaults to "projects".
 } {
     # -------- Defaults -----------------------------
-    set user_id [ad_get_user_id]
+    set user_id [ad_conn user_id]
     set url_stub [ns_urldecode [im_url_with_query]]
 
     set sel "<td class=tabsel>"
@@ -622,7 +622,7 @@ ad_proc im_event_cube {
     set location_url "/intranet-confdb/new"
     set resource_url "/intranet-confdb/new"
     set date_format "YYYY-MM-DD"
-    set current_user_id [ad_get_user_id]
+    set current_user_id [ad_conn user_id]
     set bgcolor(0) " class=roweven "
     set bgcolor(1) " class=rowodd "
     set name_order [parameter::get -package_id [apm_package_id_from_key intranet-core] -parameter "NameOrder" -default 1]
