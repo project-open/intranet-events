@@ -26,7 +26,7 @@
 <if @report_show_event_list_p@>
 <table cellspacing=0 cellpadding=0 border=0 width="100%">
 <form action=/intranet-events/action method=POST>
-<%= [export_form_vars return_url] %>
+<%= [export_vars -form {return_url}] %>
 <tr valign=top>
 <td>
 

@@ -5,7 +5,7 @@
 <%= [im_box_header $page_title] %>
 
 <form action='@return_url;noquote@' method=POST>
-<%= [export_form_vars return_url ticket_id ticket_nr ticket_name] %>
+<%= [export_vars -form {return_url ticket_id ticket_nr ticket_name}] %>
 
 <table cellspacing=2 cellpadding=2>
 
@@ -21,7 +21,7 @@
 	</tr>
 </if>
 <else>
-	<%= [export_form_vars ticket_sla_id] %>
+	<%= [export_vars -form {ticket_sla_id}] %>
 </else>
 
 
@@ -38,7 +38,7 @@
 		</tr>
 </if>
 <else>
-	<%= [export_form_vars ticket_type_id] %>
+	<%= [export_vars -form {ticket_type_id}] %>
 </else>
 
 <tr class=roweven>

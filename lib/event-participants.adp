@@ -1,6 +1,6 @@
 
 <form action="/intranet-events/participant-update" method=GET>
-<%= [export_form_vars event_id return_url] %>
+<%= [export_vars -form {event_id return_url}] %>
 <table>
 <tr>
 <td>
@@ -16,7 +16,7 @@
 </form>
 
 <form action=participant-add method=POST>
-<%= [export_form_vars event_id plugin_id return_url] %>
+<%= [export_vars -form {event_id plugin_id return_url}] %>
 <table>
 <tr>
 <td align=right>

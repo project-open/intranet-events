@@ -1,7 +1,7 @@
 <listtemplate name="customer_list"></listtemplate>
 
 <form action=customer-add method=POST>
-<%= [export_form_vars event_id return_url] %>
+<%= [export_vars -form {event_id return_url}] %>
 <table>
 <tr>
 <td><%= [im_company_select customer_id] %></td>

@@ -318,7 +318,7 @@ ad_form \
 set tid [value_if_exists event_id]
 set event_action_html "
 <form action=/intranet-events/action name=event_action>
-[export_form_vars return_url tid]
+[export_vars -form {return_url tid}]
 <input type=submit value='[lang::message::lookup "" intranet-events.Action "Action"]'>
 [im_category_select \
      -translate_p 1 \
