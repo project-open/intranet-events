@@ -173,6 +173,5 @@ set content_type "text/calendar"
 set filename "$event_name.ics"
 set all_the_headers "HTTP/1.0 200 OK\nMIME-Version: 1.0\nContent-Type: $content_type\nContent-Disposition: attachment; filename=${filename}\r\n"
 util_WriteWithExtraOutputHeaders $all_the_headers
-ns_startcontent -type $content_type
-
+ReturnHeaders $content_type
 ns_write $ics_event
