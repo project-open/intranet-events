@@ -32,8 +32,7 @@ if {0 == [llength $ticket_sla_options]} {
     ad_return_complaint 1 "
 	<br><b>[lang::message::lookup "" intranet-helpdesk.No_SLAs_for_customer "No SLA available"]</b>:<br>&nbsp;<br>
 	[lang::message::lookup "" intranet-helpdesk.No_SLAs_for_customer_msg "
-		There is no SLA (Service Level Agreement / Support Contract) <br>
-		available in this system for user '%user_name%'<br>
+		There is no Ticket Container open in this system for user '%user_name%'<br>
 		Please contact the support team to create or reactivate a SLA.
 		<br>&nbsp;<br>
 	"]
