@@ -78,7 +78,7 @@ db_dml del_order_item_rel "delete from im_event_order_item_rels where event_id =
 
 
 # ---------------------------------------------------------
-# Nuke the timesheet tasks that belongs to the event
+# Nuke the gantt tasks that belongs to the event
 # ---------------------------------------------------------
 
 if {"" != $event_timesheet_task_id} {

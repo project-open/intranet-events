@@ -193,7 +193,7 @@ create table im_events (
 	event_location_abbreviation	text,
 	event_resource_abbreviation	text,
 
-	-- Link to associated timesheet task + sweeper info
+	-- Link to associated Gantt task + sweeper info
 	event_timesheet_task_id		integer
 					constraint im_events_ts_task_fk
 					references im_timesheet_tasks,

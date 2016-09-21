@@ -842,7 +842,7 @@ append admin_html "</ul>"
 
 
 # ----------------------------------------------------------
-# Link with Timesheet Tasks
+# Link with Gantt Tasks
 # ----------------------------------------------------------
 
 set event_timesheet_task_html ""

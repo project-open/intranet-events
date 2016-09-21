@@ -36,7 +36,7 @@ ad_proc -public im_profile_consultants {} {
 namespace eval im_event {
 
 # ----------------------------------------------------------------------
-# Event - Timesheet Task Sweeper
+# Event - Gantt Task Sweeper
 # ---------------------------------------------------------------------
 
     ad_proc -public task_sweeper {
@@ -83,7 +83,7 @@ namespace eval im_event {
 	{-debug_p 1}
     } {
         Sweeper "helper" doing the actual work. 
-	Checks that every event is represented by a timesheet task 
+	Checks that every event is represented by a Gantt task 
 	with the same members, so that event trainers can log their 
 	hours.
 
@@ -98,7 +98,7 @@ namespace eval im_event {
 	# Determine which events to sweep
 
 	# Default: Sweep only recently modified events or 
-	# completely dirty ones (no timesheet task entry)
+	# completely dirty ones (no Gantt task entry)
 	set sweep_select_sql "
 		select	e.event_id
 		from	im_events e,
@@ -218,7 +218,7 @@ namespace eval im_event {
 
 
 	    # -----------------------------------------------------
-	    # Create or update the timesheet task
+	    # Create or update the Gantt task
 	    
 	    # Check if this event doesn't yet have a task associated
 	    if {"" == $event_timesheet_task_id} {
