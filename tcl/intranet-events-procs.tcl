@@ -68,9 +68,6 @@ namespace eval im_event {
 	    append debug_html "error:\n$err_msg"
 	}
 
-	# Debugging - wait for 5 seconds
-	# exec sleep 5
-
 	# Free the semaphore for next use
 	nsv_incr intranet_events sweeper_p -1
 	ns_log Notice "im_event::task_sweeper: Finished"
