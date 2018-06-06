@@ -15,11 +15,10 @@
         <summary>Events for training and other purposes</summary>
         <release-date>2016-11-15</release-date>
         <vendor url="http://www.project-open.com/">]project-open[</vendor>
+	<license>]project-open[ Free License (FL)</license>
         <description format="text/plain">Events for training and other purposes</description>
         <maturity>0</maturity>
-
         <provides url="intranet-events" version="4.0.5.0.0"/>
-
         <callbacks>
         </callbacks>
         <parameters>
