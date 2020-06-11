@@ -1382,7 +1382,7 @@ ad_proc im_event_cube {
     set export_vars_list [list]
     foreach form_var [ad_ns_set_keys $form_vars] {
 	if {"start_date" == $form_var} { continue }
-        set form_val [ns_set get $form_vars $form_var]
+        set form_val [im_opt_val -limit_to nohtml $form_var]
 	lappend export_vars_list [list $form_var $form_val]
     }
       
