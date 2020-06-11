@@ -1171,7 +1171,7 @@ SELECT im_component_plugin__new (
 );
 
 update im_component_plugins set 
-component_tcl = 'im_forum_component -user_id $current_user_id -forum_object_id $event_id -current_page_url $current_url -return_url $return_url -export_var_list {order_by start_date event_name event_status_id event_type_id event_material_id event_cost_center_id event_location_id event_creator_id event_modificator_id customer_id customer_contact_id letter start_idx how_many view_name timescale report_event_selection report_user_selection report_location_selection report_resource_selection report_show_event_list_p} -forum_type event -view_name [im_opt_val forum_view_name] -forum_order_by [im_opt_val forum_order_by] -restrict_to_mine_p "f" -restrict_to_new_topics 0',
+component_tcl = 'im_forum_component -user_id $current_user_id -forum_object_id $event_id -current_page_url $current_url -return_url $return_url -export_var_list {order_by start_date event_name event_status_id event_type_id event_material_id event_cost_center_id event_location_id event_creator_id event_modificator_id customer_id customer_contact_id letter start_idx how_many view_name timescale report_event_selection report_user_selection report_location_selection report_resource_selection report_show_event_list_p} -forum_type event -view_name [im_opt_val -limit_to alnum forum_view_name] -forum_order_by [im_opt_val -limit_to alnum forum_order_by] -restrict_to_mine_p "f" -restrict_to_new_topics 0',
 title_tcl = 'im_forum_create_bar "<B>[_ intranet-forum.Forum_Items]<B>" $event_id $return_url'
 where  plugin_name = 'Discussions' and package_name = 'intranet-events';
 

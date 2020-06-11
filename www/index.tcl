@@ -220,7 +220,7 @@ db_foreach column_list_sql $column_sql {
 			and aa.object_type = 'im_event'
 	"
 	db_foreach pass_through_vars $dynfield_sql {
-	    append col_url "&$attribute_name=[im_opt_val $attribute_name]"
+	    append col_url "&$attribute_name=[im_opt_val -limit_to nohtml $attribute_name]"
 	}
 
 	set admin_link "<a href=[export_vars -base "/intranet/admin/views/new-column" {return_url column_id {form_mode display}}]>[im_gif wrench]</a>"
@@ -359,20 +359,20 @@ if {$view_events_all_p} {
 	{event_modificator_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Modificator Modificator]"} {options $event_modificator_options}}
     }
 
-    template::element::set_value $form_id event_status_id [im_opt_val event_status_id]
-    template::element::set_value $form_id event_type_id [im_opt_val event_type_id]
+    template::element::set_value $form_id event_status_id [im_opt_val -limit_to integer event_status_id]
+    template::element::set_value $form_id event_type_id [im_opt_val -limit_to integer event_type_id]
 
 }
 
-template::element::set_value $form_id start_date [im_opt_val start_date]
-template::element::set_value $form_id timescale [im_opt_val timescale]
-template::element::set_value $form_id event_material_id [im_opt_val event_material_id]
-template::element::set_value $form_id event_cost_center_id [im_opt_val event_cost_center_id]
-template::element::set_value $form_id report_event_selection [im_opt_val report_events_selection]
-template::element::set_value $form_id report_user_selection [im_opt_val report_users_selection]
-template::element::set_value $form_id report_location_selection [im_opt_val report_location_selection]
-template::element::set_value $form_id report_resource_selection [im_opt_val report_resource_selection]
-template::element::set_value $form_id report_show_event_list_p [im_opt_val report_show_event_list_p]
+template::element::set_value $form_id start_date [im_opt_val -limit_to nohtml start_date]
+template::element::set_value $form_id timescale [im_opt_val -limit_to nohtml timescale]
+template::element::set_value $form_id event_material_id [im_opt_val -limit_to nohtml event_material_id]
+template::element::set_value $form_id event_cost_center_id [im_opt_val -limit_to nohtml event_cost_center_id]
+template::element::set_value $form_id report_event_selection [im_opt_val -limit_to nohtml report_events_selection]
+template::element::set_value $form_id report_user_selection [im_opt_val -limit_to nohtml report_users_selection]
+template::element::set_value $form_id report_location_selection [im_opt_val -limit_to nohtml report_location_selection]
+template::element::set_value $form_id report_resource_selection [im_opt_val -limit_to nohtml report_resource_selection]
+template::element::set_value $form_id report_show_event_list_p [im_opt_val -limit_to nohtml report_show_event_list_p]
 
 im_dynfield::append_attributes_to_form \
     -object_type $object_type \
