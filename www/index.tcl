@@ -337,7 +337,7 @@ ad_form \
     -mode $form_mode \
     -method GET \
     -form {
-	{start_date:text(text) {label "[_ intranet-timesheet2.Start_Date]"} {html {size 10}} {after_html {<input type="button" style="height:20px; width:20px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendar('start_date', 'y-m-d');" >}}}
+	{start_date:text(text) {label "[_ intranet-timesheet2.Start_Date]"} {html {size 10}} {after_html {<input type="button" id=start_date_calendar style="height:20px; width:20px; background: url('/resources/acs-templating/calendar.gif');" >}}}
     	{timescale:text(select),optional {label "$timescale_l10n"} {options $timescale_options }}
 	{report_event_selection:text(hidden),optional}
 	{report_user_selection:text(hidden),optional}

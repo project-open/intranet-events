@@ -765,7 +765,7 @@ insert into im_view_columns (
         visible_for
 ) values (
         97099,970,0,
-        '<input type=checkbox name=_dummy onclick="acs_ListCheckAll(''event'',this.checked)">',
+        '<input id=list_check_all type=checkbox name=_dummy>',
         '$action_checkbox',
         ''
 );

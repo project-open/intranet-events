@@ -238,8 +238,14 @@ if {"edit" == $form_mode && [info exists event_id]} {
 	if {$lock_seconds < $max_lock_seconds && $lock_user != $current_user_id} {
 	    
 	    set msg [lang::message::lookup "" intranet-events.Event_Recently_Edited "This event was locked by %lock_user_name% %lock_minutes% minutes and %lock_seconds% seconds ago."]
+
+	    set nonce_html ""
+	    if {[info exists ::__csp_nonce] && "" ne $::__csp_nonce} {
+		set nonce_html "nonce=\"$::__csp_nonce\""
+	    }
+
 	    set message_html "
-		<script type=\"text/javascript\">
+		<script type=\"text/javascript\" $nonce_html>
 			alert('$msg');
 		</script>
 	    "
@@ -305,8 +311,8 @@ ad_form \
 	{event_nr:text(hidden) {label $event_nr_label} {html {size 30}} }
 	{event_location_id:text(select) {label "[lang::message::lookup {} intranet-events.Location Location]"} {options $location_options}}
 	{event_material_id:text(select),optional {label "[lang::message::lookup {} intranet-events.Material Material]"} {options $material_options}}
-	{event_start_date:date(date) {label "[_ intranet-timesheet2.Start_Date]"} {format "YYYY-MM-DD"} {after_html {<input type="button" style="height:23px; width:23px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendarWithDateWidget('event_start_date', 'y-m-d');" >}}}
-	{event_end_date:date(date) {label "[_ intranet-timesheet2.End_Date]"} {format "YYYY-MM-DD"} {after_html {<input type="button" style="height:23px; width:23px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendarWithDateWidget('event_end_date', 'y-m-d');" >}}}
+	{event_start_date:date(date) {label "[_ intranet-timesheet2.Start_Date]"} {format "YYYY-MM-DD"} {after_html {<input type="button" id=event_start_date_calendar style="height:23px; width:23px; background: url('/resources/acs-templating/calendar.gif');" >}}}
+	{event_end_date:date(date) {label "[_ intranet-timesheet2.End_Date]"} {format "YYYY-MM-DD"} {after_html {<input type="button" id=event_end_date_calendar style="height:23px; width:23px; background: url('/resources/acs-templating/calendar.gif');">}}}
 	{event_description:text(textarea),optional,nospell {label "[_ intranet-timesheet2.Description]"} {html {cols 40}}}
     }
 
@@ -733,7 +739,7 @@ ad_form \
     -mode $form_mode \
     -method GET \
     -form {
-	{start_date:text(text) {label "[_ intranet-timesheet2.Start_Date]"} {html {size 10}} {after_html {<input type="button" style="height:20px; width:20px; background: url('/resources/acs-templating/calendar.gif');" onclick ="return showCalendar('start_date', 'y-m-d');" >}}}
+	{start_date:text(text) {label "[_ intranet-timesheet2.Start_Date]"} {html {size 10}} {after_html {<input type="button" id=start_date_calendar style="height:20px; width:20px; background: url('/resources/acs-templating/calendar.gif');" >}}}
     	{timescale:text(select),optional {label "$timescale_l10n"} {options $timescale_options }}
 	{report_event_selection:text(hidden),optional}
 	{report_user_selection:text(hidden),optional}
